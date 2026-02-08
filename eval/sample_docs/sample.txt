@@ -1,0 +1,19 @@
+Quarterly Revenue Report
+
+Company: Northwind Analytics
+Quarter: Q3 2025
+
+Summary:
+- Total revenue: $12.4M, up 8% QoQ
+- Top region: North America ($5.1M)
+- Largest product line: Insights Platform ($4.6M)
+- Churn rate: 2.1%
+
+Notable events:
+- Expanded partnership with Contoso
+- Launched v2.3 of the Insights Platform
+- Added 14 enterprise customers
+
+Guidance:
+- Expect 6-9% revenue growth next quarter
+- Focus on enterprise upsell in EMEA
