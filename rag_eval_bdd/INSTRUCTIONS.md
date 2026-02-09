@@ -29,6 +29,7 @@ Set runtime env:
 
 ```bash
 export BASE_URL="http://localhost:8000"
+export OPENAI_API_KEY="your_openai_key"  # required for live eval
 # optional
 export API_KEY=""
 export MODEL="gpt-4.1-mini"
@@ -50,10 +51,34 @@ Run deterministic smoke gate (stable, no live eval):
 python -m pytest -c pytest.ini tests -m "smoke" -q
 ```
 
+Or with Makefile (includes Allure output handling):
+
+```bash
+make smoke
+```
+
 Run live evaluation suite:
 
 ```bash
 python -m pytest -c pytest.ini steps -m "live" --alluredir=allure-results
+```
+
+Makefile shortcut:
+
+```bash
+make live
+```
+
+Run live suite in notebook-parity mode (recommended for demo alignment with notebooks):
+
+```bash
+RAG_EVAL_NOTEBOOK_PARITY_MODE=1 python -m pytest -c pytest.ini steps -m "live" --alluredir=allure-results
+```
+
+Makefile shortcut:
+
+```bash
+make live-notebook-parity
 ```
 
 Run live evaluation as non-blocking:
@@ -179,6 +204,10 @@ Optional env overrides:
 - `RAG_EVAL_DEEPEVAL_RETRY_MAX_ATTEMPTS=2`
 - `RAG_EVAL_CACHE_UPLOADED_DOCUMENTS=0`
 - `RAG_EVAL_CACHE_ASK_RESPONSES=0`
+- `RAG_EVAL_NOTEBOOK_PARITY_MODE=1` (fresh session/question + no trim + 0.5 thresholds + positional metric mapping)
+- `RAG_EVAL_FRESH_SESSION_PER_QUESTION=1`
+- `RAG_EVAL_DISABLE_CONTEXT_TRIMMING=1`
+- `RAG_EVAL_METRIC_QUESTION_MAPPING_MODE=all|positional|row`
 
 ## 8) Tag Behavior
 

@@ -22,6 +22,7 @@ export BASE_URL="http://localhost:8000"
 export OPENAI_API_KEY="your_openai_key"
 make smoke
 make live
+make live-notebook-parity
 ```
 
 Use `make ci` for a stable pipeline flow (`smoke` gate + non-blocking `live`).
@@ -232,6 +233,8 @@ rag_eval_bdd/
 ├── tests/
 │   ├── test_config_loader.py
 │   ├── test_dataset_loader.py
+│   ├── test_evaluator_modes.py
+│   ├── test_reporting.py
 │   └── test_results_store.py
 ├── jenkins/
 │   └── Jenkinsfile
@@ -289,6 +292,25 @@ Useful overrides:
 - `RAG_EVAL_DEEPEVAL_RETRY_MAX_ATTEMPTS=2`
 - `RAG_EVAL_CACHE_UPLOADED_DOCUMENTS=0`
 - `RAG_EVAL_CACHE_ASK_RESPONSES=0`
+- `RAG_EVAL_FRESH_SESSION_PER_QUESTION=1`
+- `RAG_EVAL_DISABLE_CONTEXT_TRIMMING=1`
+- `RAG_EVAL_METRIC_QUESTION_MAPPING_MODE=all|positional|row`
+
+### Notebook parity mode
+
+Use this mode when you want live BDD behavior to be close to the notebooks:
+
+- thresholds auto-set to `0.50`
+- fresh upload/session per question
+- context trimming disabled
+- reason text enabled
+- cost optimization disabled
+- positional metric-question mapping (row1->metric1, row2->metric2, row3->metric3 when counts match)
+
+Enable with:
+
+- `RAG_EVAL_NOTEBOOK_PARITY_MODE=1`
+- or `make live-notebook-parity`
 
 ### Threshold policy
 
@@ -473,6 +495,7 @@ Recommended (via Makefile):
 cd rag_eval_bdd
 make smoke              # deterministic and stable
 make live               # live backend + LLM metrics
+make live-notebook-parity  # notebook-like behavior for live demo parity
 make ci                 # smoke gate + live non-blocking
 ```
 
@@ -487,6 +510,12 @@ Live BDD evaluation suite:
 
 ```bash
 python -m pytest -c pytest.ini steps -m "live" --alluredir=allure-results
+```
+
+Notebook-parity live run:
+
+```bash
+RAG_EVAL_NOTEBOOK_PARITY_MODE=1 python -m pytest -c pytest.ini steps -m "live" --alluredir=allure-results
 ```
 
 Run all live features:

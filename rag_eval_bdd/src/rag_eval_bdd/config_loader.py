@@ -46,6 +46,26 @@ def _parse_int_env(name: str) -> Optional[int]:
     return int(value)
 
 
+def _apply_notebook_parity_defaults(config: AppConfig) -> AppConfig:
+    # Match notebook/demo behavior over cost optimization for closer score parity.
+    config.thresholds.contextual_precision = 0.5
+    config.thresholds.contextual_recall = 0.5
+    config.thresholds.contextual_relevancy = 0.5
+    config.thresholds.answer_relevancy = 0.5
+    config.thresholds.faithfulness = 0.5
+    config.thresholds.completeness = 0.5
+
+    config.model = None
+    config.evaluation.cost_optimized = False
+    config.evaluation.include_reason = True
+    config.evaluation.disable_context_trimming = True
+    config.evaluation.fresh_session_per_question = True
+    config.evaluation.cache_uploaded_documents = False
+    config.evaluation.cache_ask_responses = False
+    config.evaluation.metric_question_mapping_mode = "positional"
+    return config
+
+
 def _apply_env_overrides(config: AppConfig) -> AppConfig:
     base_url = os.getenv("BASE_URL")
     if base_url:
@@ -90,6 +110,27 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     cache_asks = _parse_bool_env("RAG_EVAL_CACHE_ASK_RESPONSES")
     if cache_asks is not None:
         config.evaluation.cache_ask_responses = cache_asks
+
+    parity_mode = _parse_bool_env("RAG_EVAL_NOTEBOOK_PARITY_MODE")
+    if parity_mode is not None:
+        config.evaluation.notebook_parity_mode = parity_mode
+
+    fresh_session = _parse_bool_env("RAG_EVAL_FRESH_SESSION_PER_QUESTION")
+    if fresh_session is not None:
+        config.evaluation.fresh_session_per_question = fresh_session
+
+    disable_trim = _parse_bool_env("RAG_EVAL_DISABLE_CONTEXT_TRIMMING")
+    if disable_trim is not None:
+        config.evaluation.disable_context_trimming = disable_trim
+
+    mapping_mode = os.getenv("RAG_EVAL_METRIC_QUESTION_MAPPING_MODE")
+    if mapping_mode:
+        normalized_mode = mapping_mode.strip().lower()
+        if normalized_mode in {"all", "positional", "row"}:
+            config.evaluation.metric_question_mapping_mode = normalized_mode
+
+    if config.evaluation.notebook_parity_mode:
+        config = _apply_notebook_parity_defaults(config)
 
     return config
 

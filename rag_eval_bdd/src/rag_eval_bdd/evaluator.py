@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import statistics
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Iterable, List
 from uuid import uuid4
 
@@ -38,6 +39,9 @@ class EvaluationRunner:
         self.config = config
 
     def _trim_retrieval_context(self, retrieval_context: List[object]) -> List[str]:
+        if self.config.evaluation.disable_context_trimming:
+            return [str(chunk) for chunk in list(retrieval_context)]
+
         chunks_limit = max(1, int(self.config.evaluation.max_retrieval_context_chunks))
         chars_limit = max(100, int(self.config.evaluation.max_retrieval_context_chars_per_chunk))
 
@@ -47,22 +51,86 @@ class EvaluationRunner:
             trimmed.append(text[:chars_limit])
         return trimmed
 
+    def _resolve_row_metrics(
+        self,
+        row: DatasetRow,
+        selected_metrics: List[str],
+        row_index: int,
+        total_rows: int,
+    ) -> List[str]:
+        mode = self.config.evaluation.metric_question_mapping_mode
+        if mode == "row":
+            mapped_metrics = self._extract_metrics_from_row(row=row)
+            if mapped_metrics:
+                return mapped_metrics
+        if mode == "positional" and total_rows == len(selected_metrics):
+            return [selected_metrics[row_index]]
+        return selected_metrics
+
+    def _extract_metrics_from_row(self, row: DatasetRow) -> List[str]:
+        if not row.additional_metadata:
+            return []
+
+        key_candidates = {
+            "metric",
+            "metrics",
+            "metric_name",
+            "metric_names",
+            "target_metric",
+            "target_metrics",
+        }
+
+        raw_value = None
+        for key, value in row.additional_metadata.items():
+            if str(key).strip().lower() in key_candidates:
+                raw_value = value
+                break
+
+        if raw_value is None:
+            return []
+
+        if isinstance(raw_value, list):
+            parts = [str(part).strip() for part in raw_value]
+        else:
+            parts = [part.strip() for part in str(raw_value).split(",")]
+
+        mapped: List[str] = []
+        for part in parts:
+            if not part:
+                continue
+            canonical = normalize_metric_name(part)
+            if not hasattr(self.config.thresholds, canonical):
+                continue
+            if canonical not in mapped:
+                mapped.append(canonical)
+        return mapped
+
     def evaluate_dataset(
         self,
         dataset_rows: Iterable[DatasetRow],
         selected_metrics: List[str],
-        session_id: str,
+        session_id: str | None,
         feature: str,
         scenario: str,
         tags: List[str],
+        uploaded_documents: List[str] | None = None,
     ) -> RunResult:
         run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid4().hex[:8]}"
         question_results: List[QuestionEvalResult] = []
+        uploaded_documents = uploaded_documents or []
 
         rows = list(dataset_rows)
-        for row in rows:
+        for row_index, row in enumerate(rows):
+            row_session_id = session_id
+            if self.config.evaluation.fresh_session_per_question:
+                if uploaded_documents:
+                    upload_path = Path(uploaded_documents[0]).resolve()
+                    row_session_id, _ = self.client.upload_document(upload_path)
+            if not row_session_id:
+                raise ValueError("Missing session_id for evaluation. Upload documents before running metrics.")
+
             raw_request, raw_response = self.client.ask_question(
-                session_id=session_id,
+                session_id=row_session_id,
                 question=row.question,
                 use_cache=self.config.evaluation.cache_ask_responses,
             )
@@ -80,7 +148,13 @@ class EvaluationRunner:
             )
 
             metric_results: List[MetricResult] = []
-            for metric_name in selected_metrics:
+            row_metrics = self._resolve_row_metrics(
+                row=row,
+                selected_metrics=selected_metrics,
+                row_index=row_index,
+                total_rows=len(rows),
+            )
+            for metric_name in row_metrics:
                 canonical_name = normalize_metric_name(metric_name)
                 threshold = metric_threshold(canonical_name, self.config)
                 metric = build_metric(canonical_name, self.config)

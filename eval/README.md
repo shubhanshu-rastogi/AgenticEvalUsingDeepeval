@@ -38,6 +38,8 @@ from eval.tests.layer2_output_eval import evaluate_layer2
 - `eval/notebooks/01_end_to_end_demo.ipynb`
 - `eval/notebooks/02_batch_golden_eval.ipynb`
 - `eval/notebooks/03_full_metrics_eval.ipynb`
+- `eval/notebooks/04_layer2_answer_relevancy.ipynb`
+- `eval/notebooks/05_layer1_contextual_metrix.ipynb`
 
 These notebooks call the FastAPI backend to upload and query documents, then run DeepEval metrics.
 

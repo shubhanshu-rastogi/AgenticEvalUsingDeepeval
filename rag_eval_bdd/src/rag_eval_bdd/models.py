@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -42,6 +42,10 @@ class EvaluationConfig(BaseModel):
     deepeval_retry_max_attempts: int = 1
     cache_uploaded_documents: bool = True
     cache_ask_responses: bool = True
+    notebook_parity_mode: bool = False
+    fresh_session_per_question: bool = False
+    disable_context_trimming: bool = False
+    metric_question_mapping_mode: Literal["all", "positional", "row"] = "all"
 
 
 class AppConfig(BaseModel):

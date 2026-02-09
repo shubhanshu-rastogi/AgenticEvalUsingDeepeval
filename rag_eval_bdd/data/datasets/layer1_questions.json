@@ -13,8 +13,8 @@
   },
   {
     "id": "L1_EXT_3",
-    "question": "Who caught Rinku Singh in the death overs?",
-    "expected_answer": "Rinku Singh was caught by Stubbs.",
-    "category": "fielding"
+    "question": "Which bowler conceded 49 runs in two overs and what key events happened during that spell?",
+    "expected_answer": "Nortje conceded 49 runs in his first two overs and later dismissed Rinku Singh, caught by Stubbs.",
+    "category": "bowling"
   }
 ]

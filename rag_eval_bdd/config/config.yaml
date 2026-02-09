@@ -31,5 +31,9 @@ evaluation:
   deepeval_retry_max_attempts: 1
   cache_uploaded_documents: true
   cache_ask_responses: true
+  notebook_parity_mode: false
+  fresh_session_per_question: false
+  disable_context_trimming: false
+  metric_question_mapping_mode: "all"
 
 model: "gpt-4.1-mini"

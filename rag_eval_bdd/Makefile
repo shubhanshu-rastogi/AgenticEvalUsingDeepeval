@@ -4,7 +4,7 @@ VENV ?= $(if $(wildcard ../.venv/bin/python),../.venv,.venv)
 PIP := $(VENV)/bin/pip
 PYTEST := $(VENV)/bin/pytest
 
-.PHONY: venv install test smoke live live-non-blocking ci test-layer1 test-layer2 report run-layer1 run-layer2 synthesize
+.PHONY: venv install test smoke live live-notebook-parity live-non-blocking ci test-layer1 test-layer2 report run-layer1 run-layer2 synthesize
 
 venv:
 	@if [ ! -x "$(VENV)/bin/python" ]; then \
@@ -23,6 +23,9 @@ smoke:
 
 live:
 	$(PYTEST) -c pytest.ini steps -m "live" --alluredir=allure-results
+
+live-notebook-parity:
+	RAG_EVAL_NOTEBOOK_PARITY_MODE=1 $(PYTEST) -c pytest.ini steps -m "live" --alluredir=allure-results
 
 live-non-blocking:
 	-$(PYTEST) -c pytest.ini steps -m "live" --alluredir=allure-results

@@ -48,6 +48,11 @@ def given_documents_uploaded(
     resolved = resolved.resolve()
     cache_key = str(resolved)
 
+    if app_config.evaluation.fresh_session_per_question:
+        scenario_state.session_id = None
+        scenario_state.uploaded_documents.append(str(resolved))
+        return
+
     if app_config.evaluation.cache_uploaded_documents and cache_key in upload_session_cache:
         session_id = upload_session_cache[cache_key]
     else:
@@ -76,8 +81,16 @@ def given_inline_dataset(docstring: str, scenario_state, repo_root: Path):
 def when_evaluate_all_questions(request, scenario_state, evaluation_runner):
     if not scenario_state.dataset_rows:
         raise AssertionError("Dataset is empty. Load dataset before evaluation.")
-    if not scenario_state.session_id:
+    if (
+        not evaluation_runner.config.evaluation.fresh_session_per_question
+        and not scenario_state.session_id
+    ):
         raise AssertionError("No backend session available. Upload documents before evaluation.")
+    if (
+        evaluation_runner.config.evaluation.fresh_session_per_question
+        and not scenario_state.uploaded_documents
+    ):
+        raise AssertionError("No uploaded document path available. Upload documents before evaluation.")
 
     tags = [marker.name for marker in request.node.iter_markers()]
     selected_metrics = select_metrics_from_tags(tags=tags, explicit_metrics=scenario_state.explicit_metrics)
@@ -92,6 +105,7 @@ def when_evaluate_all_questions(request, scenario_state, evaluation_runner):
         feature=str(request.node.location[0]),
         scenario=request.node.name,
         tags=tags,
+        uploaded_documents=scenario_state.uploaded_documents,
     )
 
 

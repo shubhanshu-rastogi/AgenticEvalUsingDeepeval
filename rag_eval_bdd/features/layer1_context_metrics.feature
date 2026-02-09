@@ -10,7 +10,7 @@ Feature: Layer 1 retrieval quality evaluation
       | id   | question                                              | expected_answer                                | category |
       | L1Q1 | How many sixes did Tilak Varma hit?                  | Tilak Varma hit 3 sixes.                       | batting  |
       | L1Q2 | Who dismissed Suryakumar Yadav?                      | Suryakumar Yadav was dismissed by Maphaka.     | wickets  |
-      | L1Q3 | What was Ishan Kishan's strike contribution in powerplay? | Ishan Kishan scored quickly in the powerplay. | powerplay |
+      | L1Q3 | Which bowler conceded 49 runs in two overs and what key events happened during that spell? | Nortje conceded 49 runs in his first two overs and later dismissed Rinku Singh, caught by Stubbs. | bowling |
       """
     When I evaluate all questions
     Then metric "contextual_precision" should be >= configured threshold
