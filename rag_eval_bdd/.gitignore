@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+.venv-ci/
+allure-results/
+allure-report/
+results/index.json
+results/runs/*
+!results/runs/.gitkeep
+results/trends/*.png
+results/trends/*.html
+results/trends/last5.json

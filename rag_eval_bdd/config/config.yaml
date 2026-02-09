@@ -1,0 +1,35 @@
+backend:
+  base_url: "http://localhost:8000"
+  upload_endpoint: "/upload"
+  ask_endpoint: "/ask"
+  timeout_s: 120
+  retries: 3
+  backoff_s: 1.0
+
+thresholds:
+  contextual_precision: 0.60
+  contextual_recall: 0.60
+  contextual_relevancy: 0.60
+  answer_relevancy: 0.60
+  faithfulness: 0.60
+  completeness: 0.60
+
+reporting:
+  keep_last_n_runs: 5
+  enable_trend_charts: true
+
+synthesize:
+  default_num_questions: 50
+  output_dir: "rag_eval_bdd/data/generated"
+
+evaluation:
+  cost_optimized: true
+  include_reason: false
+  max_retrieval_context_chunks: 2
+  max_retrieval_context_chars_per_chunk: 700
+  faithfulness_truths_extraction_limit: 6
+  deepeval_retry_max_attempts: 1
+  cache_uploaded_documents: true
+  cache_ask_responses: true
+
+model: "gpt-4.1-mini"

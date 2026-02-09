@@ -1,0 +1,20 @@
+[
+  {
+    "id": "L1_EXT_1",
+    "question": "How many sixes did Tilak Varma hit?",
+    "expected_answer": "Tilak Varma hit 3 sixes.",
+    "category": "batting"
+  },
+  {
+    "id": "L1_EXT_2",
+    "question": "Who dismissed Suryakumar Yadav?",
+    "expected_answer": "Kwena Maphaka dismissed Suryakumar Yadav.",
+    "category": "wickets"
+  },
+  {
+    "id": "L1_EXT_3",
+    "question": "Who caught Rinku Singh in the death overs?",
+    "expected_answer": "Rinku Singh was caught by Stubbs.",
+    "category": "fielding"
+  }
+]

@@ -52,3 +52,15 @@ htmlcov/
 
 # General caches
 .cache/
+
+# RAG Eval BDD runtime artifacts
+rag_eval_bdd/.venv/
+rag_eval_bdd/.venv-ci/
+rag_eval_bdd/allure-results/
+rag_eval_bdd/allure-report/
+rag_eval_bdd/results/index.json
+rag_eval_bdd/results/runs/*
+!rag_eval_bdd/results/runs/.gitkeep
+rag_eval_bdd/results/trends/*.png
+rag_eval_bdd/results/trends/*.html
+rag_eval_bdd/results/trends/last5.json

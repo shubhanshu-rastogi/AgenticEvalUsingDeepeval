@@ -1,0 +1,68 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'LIVE_PYTEST_TAGS', defaultValue: 'live and (layer1 or layer2)', description: 'Pytest marker expression for live evaluation stage')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Setup Python') {
+      steps {
+        sh '''
+          cd rag_eval_bdd
+          python3 -m venv .venv-ci
+          . .venv-ci/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+        '''
+      }
+    }
+
+    stage('Smoke Gate (Deterministic)') {
+      steps {
+        sh '''
+          cd rag_eval_bdd
+          . .venv-ci/bin/activate
+          pytest -c pytest.ini tests -m "smoke" -q
+        '''
+      }
+    }
+
+    stage('Live Evaluation (Non-blocking)') {
+      steps {
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+          sh '''
+            cd rag_eval_bdd
+            . .venv-ci/bin/activate
+            pytest -c pytest.ini steps -m "$LIVE_PYTEST_TAGS" --alluredir=allure-results
+          '''
+        }
+      }
+    }
+
+    stage('Build Allure Report') {
+      steps {
+        sh '''
+          cd rag_eval_bdd
+          . .venv-ci/bin/activate
+          allure generate allure-results --clean -o allure-report || true
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      allure includeProperties: false, jdk: '', results: [[path: 'rag_eval_bdd/allure-results']]
+      archiveArtifacts artifacts: 'rag_eval_bdd/results/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'rag_eval_bdd/allure-report/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'rag_eval_bdd/allure-results/**', allowEmptyArchive: true
+    }
+  }
+}
