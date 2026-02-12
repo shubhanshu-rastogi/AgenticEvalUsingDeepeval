@@ -1,7 +1,20 @@
 @layer2
 Feature: Layer 2 answer quality evaluation
 
-  @answer_relevancy @faithfulness @completeness
+  @sanity @smoke @answer_relevancy
+  Scenario: Smoke layer2 answer relevancy with one inline row
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+      """
+      | id   | question                             | expected_answer           | category |
+      | L2S1 | How many sixes did Tilak Varma hit? | Tilak Varma hit 3 sixes.  | batting  |
+      """
+    When I evaluate all questions with metrics "answer_relevancy"
+    Then metric "answer_relevancy" should be >= configured threshold
+    And save results for reporting
+
+  @sanity @answer_relevancy @faithfulness @completeness
   Scenario: Evaluate layer2 answer metrics from inline dataset table
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -18,6 +31,7 @@ Feature: Layer 2 answer quality evaluation
     And metric "completeness" should be >= configured threshold
     And save results for reporting
 
+  @regression @answer_relevancy @faithfulness @completeness
   Scenario: Evaluate layer2 answer metrics from external dataset file
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"

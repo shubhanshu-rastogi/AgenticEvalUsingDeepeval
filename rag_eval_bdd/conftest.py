@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 import os
 from pathlib import Path
 import shutil
-import subprocess
 from typing import List, Optional
 
 import pytest
@@ -34,13 +33,6 @@ def _env_flag(name: str, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _is_ci_environment() -> bool:
-    return any(
-        os.getenv(name)
-        for name in ("CI", "GITHUB_ACTIONS", "JENKINS_URL", "TEAMCITY_VERSION", "BUILDKITE")
-    )
-
-
 def _reporter_line(pytest_config: pytest.Config, message: str) -> None:
     terminal_reporter = pytest_config.pluginmanager.get_plugin("terminalreporter")
     if terminal_reporter is not None:
@@ -49,41 +41,29 @@ def _reporter_line(pytest_config: pytest.Config, message: str) -> None:
         print(message)
 
 
-def _resolve_allure_dir(pytest_config: pytest.Config) -> Optional[Path]:
-    try:
-        alluredir = pytest_config.getoption("--alluredir")
-    except Exception:  # noqa: BLE001
-        alluredir = None
-
-    if not alluredir:
-        return None
-
-    path = Path(str(alluredir))
-    if not path.is_absolute():
-        path = Path(str(pytest_config.rootpath)) / path
-    return path
+def _resolve_report_dir(pytest_config: pytest.Config) -> Path:
+    return Path(str(pytest_config.rootpath)) / "results" / "reports"
 
 
-def _resolve_allure_report_dir(pytest_config: pytest.Config) -> Path:
-    return Path(str(pytest_config.rootpath)) / "allure-report"
+def _reset_current_session_index(pytest_config: pytest.Config) -> None:
+    current_index = Path(str(pytest_config.rootpath)) / "results" / "current_index.json"
+    current_index.parent.mkdir(parents=True, exist_ok=True)
+    current_index.write_text('{"runs": []}\n')
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
     pytest_config = session.config
-    allure_dir = _resolve_allure_dir(pytest_config)
-    if allure_dir is None:
+    _reset_current_session_index(pytest_config)
+
+    report_dir = _resolve_report_dir(pytest_config)
+    if not _env_flag("RAG_EVAL_AUTO_HTML_REPORT_CLEAN", default=True):
         return
 
-    if not _env_flag("RAG_EVAL_AUTO_ALLURE_CLEAN", default=True):
-        return
-
-    report_dir = _resolve_allure_report_dir(pytest_config)
-    shutil.rmtree(allure_dir, ignore_errors=True)
-    allure_dir.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(report_dir, ignore_errors=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
     _reporter_line(
         pytest_config,
-        f"[rag-eval-bdd] cleaned previous Allure artifacts: {allure_dir} and {report_dir}",
+        f"[rag-eval-bdd] cleaned previous HTML report artifacts: {report_dir}",
     )
 
 
@@ -91,47 +71,20 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     del exitstatus  # not used for now, kept for hook signature clarity
 
     pytest_config = session.config
-    allure_dir = _resolve_allure_dir(pytest_config)
-    if allure_dir is None:
-        return
-
-    if not _env_flag("RAG_EVAL_AUTO_ALLURE_GENERATE", default=True):
-        return
-
-    if shutil.which("allure") is None:
+    report_dir = _resolve_report_dir(pytest_config)
+    report_path = report_dir / "index.html"
+    if not report_path.exists():
         _reporter_line(
             pytest_config,
-            "[rag-eval-bdd] Allure CLI not found. Install with 'brew install allure' to auto-generate/open report.",
+            "[rag-eval-bdd] HTML report not found. Run live scenarios to generate results.",
         )
         return
 
-    report_dir = _resolve_allure_report_dir(pytest_config)
-    generate_cmd = ["allure", "generate", str(allure_dir), "--clean", "-o", str(report_dir)]
-    generate_proc = subprocess.run(generate_cmd, cwd=str(pytest_config.rootpath), capture_output=True, text=True, check=False)
-
-    if generate_proc.returncode != 0:
-        stderr_tail = (generate_proc.stderr or "").strip().splitlines()
-        detail = stderr_tail[-1] if stderr_tail else "Unknown Allure generate error."
-        _reporter_line(pytest_config, f"[rag-eval-bdd] failed to generate Allure report: {detail}")
-        return
-
-    _reporter_line(pytest_config, f"[rag-eval-bdd] generated report: {report_dir}/index.html")
-
-    should_open = _env_flag("RAG_EVAL_AUTO_ALLURE_OPEN", default=not _is_ci_environment())
-    if not should_open:
-        return
-
-    try:
-        subprocess.Popen(
-            ["allure", "open", str(report_dir)],
-            cwd=str(pytest_config.rootpath),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        _reporter_line(pytest_config, "[rag-eval-bdd] opened Allure report in browser (served over local HTTP).")
-    except Exception as exc:  # noqa: BLE001
-        _reporter_line(pytest_config, f"[rag-eval-bdd] could not auto-open Allure report: {exc}")
+    _reporter_line(pytest_config, f"[rag-eval-bdd] generated HTML report: {report_path}")
+    _reporter_line(
+        pytest_config,
+        f"[rag-eval-bdd] trend dashboard: {Path(str(pytest_config.rootpath)) / 'results' / 'trends' / 'last5.html'}",
+    )
 
 
 @pytest.fixture(scope="session")

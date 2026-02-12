@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -12,12 +11,12 @@ from rag_eval_bdd.dataset_loader import (
     load_inline_table,
     resolve_dataset_reference,
 )
+from rag_eval_bdd.executive_report import write_executive_html
 from rag_eval_bdd.metric_registry import metric_threshold, normalize_metric_name, select_metrics_from_tags
 from rag_eval_bdd.reporting import (
     attach_json,
     attach_run_artifacts,
     attach_text,
-    generate_trend_charts,
     write_trend_html,
 )
 
@@ -31,6 +30,40 @@ pytestmark = [pytest.mark.live]
 @given("backend is reachable")
 def given_backend_is_reachable(backend_client):
     backend_client.check_reachable()
+
+
+def _persist_results_for_reporting(scenario_state, results_store, framework_root: Path, app_config) -> None:
+    if scenario_state.run_result is None:
+        raise AssertionError("No run result to save.")
+
+    # Keep this idempotent because both the evaluation step and explicit save step can call it.
+    if scenario_state.run_dir is not None:
+        return
+
+    run_dir, trend_summary = results_store.save_run(scenario_state.run_result)
+    scenario_state.run_dir = run_dir
+
+    attach_text("selected_metrics", ", ".join(scenario_state.selected_metrics))
+    attach_json("dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
+
+    trend_html = write_trend_html(
+        trend_summary,
+        output_path=framework_root / "results" / "trends" / "last5.html",
+        pass_rate_rule=app_config.reporting.trend_status_pass_rate_rule,
+        min_pass_rate=app_config.reporting.trend_status_min_pass_rate,
+    )
+
+    current_runs = results_store.load_current_session_run_results()
+    if not current_runs:
+        current_runs = [scenario_state.run_result]
+    write_executive_html(
+        run_results=current_runs,
+        trend_summary=trend_summary,
+        output_path=framework_root / "results" / "reports" / "index.html",
+        pass_rate_rule=app_config.reporting.trend_status_pass_rate_rule,
+        min_pass_rate=app_config.reporting.trend_status_min_pass_rate,
+    )
+    attach_run_artifacts(scenario_state.run_result, trend_summary, [], trend_html)
 
 
 @given(parsers.parse('documents are uploaded from "{document_path}"'))
@@ -78,7 +111,7 @@ def given_inline_dataset(docstring: str, scenario_state, repo_root: Path):
 
 
 @when("I evaluate all questions")
-def when_evaluate_all_questions(request, scenario_state, evaluation_runner):
+def when_evaluate_all_questions(request, scenario_state, evaluation_runner, results_store, framework_root: Path, app_config):
     if not scenario_state.dataset_rows:
         raise AssertionError("Dataset is empty. Load dataset before evaluation.")
     if (
@@ -107,12 +140,33 @@ def when_evaluate_all_questions(request, scenario_state, evaluation_runner):
         tags=tags,
         uploaded_documents=scenario_state.uploaded_documents,
     )
+    _persist_results_for_reporting(
+        scenario_state=scenario_state,
+        results_store=results_store,
+        framework_root=framework_root,
+        app_config=app_config,
+    )
 
 
 @when(parsers.parse('I evaluate all questions with metrics "{metric_csv}"'))
-def when_evaluate_with_explicit_metrics(metric_csv: str, scenario_state, request, evaluation_runner):
+def when_evaluate_with_explicit_metrics(
+    metric_csv: str,
+    scenario_state,
+    request,
+    evaluation_runner,
+    results_store,
+    framework_root: Path,
+    app_config,
+):
     scenario_state.explicit_metrics = [metric.strip() for metric in metric_csv.split(",") if metric.strip()]
-    when_evaluate_all_questions(request=request, scenario_state=scenario_state, evaluation_runner=evaluation_runner)
+    when_evaluate_all_questions(
+        request=request,
+        scenario_state=scenario_state,
+        evaluation_runner=evaluation_runner,
+        results_store=results_store,
+        framework_root=framework_root,
+        app_config=app_config,
+    )
 
 
 @then(parsers.parse('metric "{metric_name}" should be >= configured threshold'))
@@ -137,18 +191,9 @@ def then_metric_above_threshold(metric_name: str, scenario_state, app_config):
 
 @then("save results for reporting")
 def then_save_results_for_reporting(scenario_state, results_store, framework_root: Path, app_config):
-    if scenario_state.run_result is None:
-        raise AssertionError("No run result to save.")
-
-    run_dir, trend_summary = results_store.save_run(scenario_state.run_result)
-    scenario_state.run_dir = run_dir
-
-    attach_text("selected_metrics", ", ".join(scenario_state.selected_metrics))
-    attach_json("dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
-
-    trend_charts: List[Path] = []
-    if app_config.reporting.enable_trend_charts:
-        trend_charts = generate_trend_charts(trend_summary, output_dir=framework_root / "results" / "trends")
-
-    trend_html = write_trend_html(trend_summary, output_path=framework_root / "results" / "trends" / "last5.html")
-    attach_run_artifacts(scenario_state.run_result, trend_summary, trend_charts, trend_html)
+    _persist_results_for_reporting(
+        scenario_state=scenario_state,
+        results_store=results_store,
+        framework_root=framework_root,
+        app_config=app_config,
+    )

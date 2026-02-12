@@ -2,40 +2,37 @@ from __future__ import annotations
 
 from datetime import datetime
 import html
-import json
 from pathlib import Path
 from typing import Any, Iterable, List
 
-import matplotlib.pyplot as plt
-
 from rag_eval_bdd.models import RunResult, TrendSummary
 
-try:
-    import allure
-except Exception:  # noqa: BLE001
-    allure = None
-
-
 def attach_json(name: str, payload: Any) -> None:
-    if allure is None:
-        return
-    allure.attach(json.dumps(payload, indent=2), name=name, attachment_type=allure.attachment_type.JSON)
+    del name, payload
+    return
 
 
 def attach_text(name: str, payload: str) -> None:
-    if allure is None:
-        return
-    allure.attach(payload, name=name, attachment_type=allure.attachment_type.TEXT)
+    del name, payload
+    return
 
 
 def attach_file(name: str, path: Path, attachment_type: Any = None) -> None:
-    if allure is None:
-        return
-    atype = attachment_type or allure.attachment_type.PNG
-    allure.attach.file(str(path), name=name, attachment_type=atype)
+    del name, path, attachment_type
+    return
 
 
 def generate_trend_charts(trend_summary: TrendSummary, output_dir: Path) -> List[Path]:
+    import os
+
+    # Ensure matplotlib can write cache files in restricted environments.
+    if "MPLCONFIGDIR" not in os.environ:
+        mpl_cache = Path.cwd() / ".cache" / "matplotlib"
+        mpl_cache.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(mpl_cache)
+
+    import matplotlib.pyplot as plt
+
     output_dir.mkdir(parents=True, exist_ok=True)
     generated: List[Path] = []
 
@@ -84,12 +81,40 @@ def _safe_score(value: float | None) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def _status(avg_score: float | None, threshold: float | None) -> tuple[str, str]:
+def _required_pass_rate(
+    threshold: float | None,
+    pass_rate_rule: str,
+    min_pass_rate: float,
+) -> float | None:
+    if pass_rate_rule == "none":
+        return None
+    if pass_rate_rule == "threshold_based":
+        if threshold is None:
+            return None
+        return _safe_score(threshold) * 100.0
+    return max(0.0, min(100.0, float(min_pass_rate)))
+
+
+def _status(
+    avg_score: float | None,
+    threshold: float | None,
+    pass_rate: float | None = None,
+    pass_rate_rule: str = "min_pass_rate",
+    min_pass_rate: float = 100.0,
+) -> tuple[str, str]:
     if avg_score is None or threshold is None:
         return "N/A", "status-na"
-    if avg_score >= threshold:
-        return "PASS", "status-pass"
-    return "FAIL", "status-fail"
+    if avg_score < threshold:
+        return "FAIL", "status-fail"
+
+    required_pass_rate = _required_pass_rate(
+        threshold=threshold,
+        pass_rate_rule=pass_rate_rule,
+        min_pass_rate=min_pass_rate,
+    )
+    if required_pass_rate is not None and pass_rate is not None and pass_rate < required_pass_rate:
+        return "FAIL", "status-fail"
+    return "PASS", "status-pass"
 
 
 def _format_delta(delta: float | None) -> str:
@@ -111,7 +136,12 @@ def _svg_line_path(points: list[tuple[float, float]]) -> str:
     )
 
 
-def _build_metric_svg(metric_name: str, points: list[Any]) -> str:
+def _build_metric_svg(
+    metric_name: str,
+    points: list[Any],
+    pass_rate_rule: str,
+    min_pass_rate: float,
+) -> str:
     width, height = 900, 250
     left, right, top, bottom = 58, 20, 24, 44
     plot_w = width - left - right
@@ -157,7 +187,13 @@ def _build_metric_svg(metric_name: str, points: list[Any]) -> str:
     for i, point in enumerate(points):
         score = point.avg_score
         threshold_value = point.threshold if point.threshold is not None else threshold
-        _, klass = _status(score, threshold_value)
+        _, klass = _status(
+            score,
+            threshold_value,
+            pass_rate=point.pass_rate,
+            pass_rate_rule=pass_rate_rule,
+            min_pass_rate=min_pass_rate,
+        )
         cx, cy = avg_points[i]
         circles.append(f"<circle cx='{cx:.2f}' cy='{cy:.2f}' r='4.5' class='dot {klass}' />")
         circles.append(
@@ -188,7 +224,12 @@ def _build_metric_svg(metric_name: str, points: list[Any]) -> str:
     """
 
 
-def write_trend_html(trend_summary: TrendSummary, output_path: Path) -> Path:
+def write_trend_html(
+    trend_summary: TrendSummary,
+    output_path: Path,
+    pass_rate_rule: str = "min_pass_rate",
+    min_pass_rate: float = 100.0,
+) -> Path:
     metric_cards: List[str] = []
     for metric in trend_summary.metrics:
         points = metric.points
@@ -200,7 +241,13 @@ def write_trend_html(trend_summary: TrendSummary, output_path: Path) -> Path:
         latest_score = latest.avg_score
         latest_threshold = latest.threshold
         latest_pass_rate = latest.pass_rate
-        status_text, status_class = _status(latest_score, latest_threshold)
+        status_text, status_class = _status(
+            latest_score,
+            latest_threshold,
+            pass_rate=latest_pass_rate,
+            pass_rate_rule=pass_rate_rule,
+            min_pass_rate=min_pass_rate,
+        )
 
         delta = None
         if first.avg_score is not None and latest.avg_score is not None:
@@ -220,7 +267,13 @@ def write_trend_html(trend_summary: TrendSummary, output_path: Path) -> Path:
         for point in points:
             score = point.avg_score
             threshold = point.threshold
-            row_status, row_class = _status(score, threshold)
+            row_status, row_class = _status(
+                score,
+                threshold,
+                pass_rate=point.pass_rate,
+                pass_rate_rule=pass_rate_rule,
+                min_pass_rate=min_pass_rate,
+            )
             score_text = "N/A" if score is None else f"{score:.4f}"
             pass_text = "N/A" if point.pass_rate is None else f"{point.pass_rate:.2f}%"
             threshold_text = "N/A" if threshold is None else f"{threshold:.2f}"
@@ -255,7 +308,7 @@ def write_trend_html(trend_summary: TrendSummary, output_path: Path) -> Path:
                 <div class="kpi"><span class="label">Consistency (1 SD)</span><span class="value {consistency_class}">{consistency}</span></div>
               </div>
               <div class="chart-wrap">
-                {_build_metric_svg(metric.metric_name, points)}
+                {_build_metric_svg(metric.metric_name, points, pass_rate_rule, min_pass_rate)}
               </div>
               <table class="runs-table">
                 <thead>
@@ -351,21 +404,5 @@ def write_trend_html(trend_summary: TrendSummary, output_path: Path) -> Path:
 
 
 def attach_run_artifacts(run_result: RunResult, trend_summary: TrendSummary, trend_charts: Iterable[Path], trend_html: Path) -> None:
-    attach_json("run_result", run_result.model_dump())
-
-    for question in run_result.question_results:
-        attach_json(f"question_{question.question_id}_metrics", {
-            "question": question.question,
-            "expected_answer": question.expected_answer,
-            "actual_answer": question.actual_answer,
-            "metrics": [metric.model_dump() for metric in question.metrics],
-        })
-        attach_json(f"question_{question.question_id}_raw_request", question.raw_request)
-        attach_json(f"question_{question.question_id}_raw_response", question.raw_response)
-
-    attach_json("trend_last5", trend_summary.model_dump())
-    for chart_path in trend_charts:
-        attach_file(chart_path.name, chart_path)
-    if trend_html.exists():
-        if allure is not None:
-            attach_file(trend_html.name, trend_html, attachment_type=allure.attachment_type.HTML)
+    del run_result, trend_summary, trend_charts, trend_html
+    return

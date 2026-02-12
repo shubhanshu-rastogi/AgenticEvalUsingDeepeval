@@ -54,3 +54,23 @@ def test_results_store_generates_last5(tmp_path: Path):
     assert trend_file.exists()
     payload = trend_file.read_text()
     assert "contextual_precision" in payload
+    recent_runs = store.load_recent_run_results()
+    assert len(recent_runs) == 3
+    current_runs = store.load_current_session_run_results()
+    assert len(current_runs) == 3
+    refreshed = store.refresh_trends()
+    assert refreshed.metrics
+
+
+def test_results_store_can_reset_current_session_runs(tmp_path: Path):
+    store = ResultsStore(base_dir=tmp_path, keep_last_n=5)
+
+    store.save_run(_sample_run("RUN_A", 0.72))
+    store.save_run(_sample_run("RUN_B", 0.73))
+    assert len(store.load_current_session_run_results()) == 2
+
+    store.reset_current_session()
+    assert store.load_current_session_run_results() == []
+
+    # Historical trend index remains untouched after current-session reset.
+    assert len(store.load_recent_run_results()) == 2

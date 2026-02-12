@@ -26,6 +26,8 @@ class ThresholdsConfig(BaseModel):
 class ReportingConfig(BaseModel):
     keep_last_n_runs: int = 5
     enable_trend_charts: bool = True
+    trend_status_pass_rate_rule: Literal["none", "min_pass_rate", "threshold_based"] = "min_pass_rate"
+    trend_status_min_pass_rate: float = Field(default=100.0, ge=0.0, le=100.0)
 
 
 class SynthesizeConfig(BaseModel):

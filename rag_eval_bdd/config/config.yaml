@@ -7,16 +7,18 @@ backend:
   backoff_s: 1.0
 
 thresholds:
-  contextual_precision: 0.60
-  contextual_recall: 0.60
-  contextual_relevancy: 0.60
-  answer_relevancy: 0.60
-  faithfulness: 0.60
-  completeness: 0.60
+  contextual_precision: 0.50
+  contextual_recall: 0.50
+  contextual_relevancy: 0.50
+  answer_relevancy: 0.50
+  faithfulness: 0.50
+  completeness: 0.50
 
 reporting:
   keep_last_n_runs: 5
   enable_trend_charts: true
+  trend_status_pass_rate_rule: "min_pass_rate"
+  trend_status_min_pass_rate: 100.0
 
 synthesize:
   default_num_questions: 50

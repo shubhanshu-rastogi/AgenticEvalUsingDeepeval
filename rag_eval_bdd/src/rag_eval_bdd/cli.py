@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
 
 from rag_eval_bdd.config_loader import default_config_path, get_framework_root, load_config
+from rag_eval_bdd.executive_report import write_executive_html
+from rag_eval_bdd.reporting import write_trend_html
+from rag_eval_bdd.results_store import ResultsStore
 from rag_eval_bdd.synthesize import synthesize_dataset
 
 
@@ -20,11 +24,20 @@ def _derive_tags_from_feature(feature: str) -> Optional[str]:
     return None
 
 
+def _normalize_marker_expression(expression: Optional[str]) -> Optional[str]:
+    if not expression:
+        return expression
+
+    normalized = expression.replace(",", " or ")
+    normalized = re.sub(r"@([A-Za-z_][A-Za-z0-9_]*)", r"\1", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized or None
+
+
 def _run_pytest(
     tags: Optional[str],
     feature: Optional[str],
     config_path: Optional[str],
-    allure_dir: str,
     pytest_args: list[str],
     suite: str = "live",
 ) -> int:
@@ -39,10 +52,7 @@ def _run_pytest(
     else:
         cmd.append("steps")
 
-    if suite in {"live", "all"}:
-        cmd.append(f"--alluredir={allure_dir}")
-
-    resolved_tags = tags
+    resolved_tags = _normalize_marker_expression(tags)
     if feature and not resolved_tags:
         resolved_tags = _derive_tags_from_feature(feature)
     if suite == "smoke" and not resolved_tags:
@@ -68,10 +78,43 @@ def _cmd_run(args: argparse.Namespace) -> int:
         tags=args.tags,
         feature=args.feature,
         config_path=args.config,
-        allure_dir=args.allure_dir,
         pytest_args=args.pytest_args,
         suite=args.suite,
     )
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    framework_root = get_framework_root()
+    results_store = ResultsStore(
+        base_dir=framework_root / "results",
+        keep_last_n=config.reporting.keep_last_n_runs,
+    )
+    trend_summary = results_store.refresh_trends()
+    run_results = results_store.load_current_session_run_results()
+    if not run_results:
+        run_results = results_store.load_recent_run_results()
+    if not run_results:
+        print("No saved runs found. Execute live scenarios first.")
+        return 0
+
+    trend_dir = framework_root / "results" / "trends"
+    trend_path = write_trend_html(
+        trend_summary,
+        output_path=trend_dir / "last5.html",
+        pass_rate_rule=config.reporting.trend_status_pass_rate_rule,
+        min_pass_rate=config.reporting.trend_status_min_pass_rate,
+    )
+    executive_path = write_executive_html(
+        run_results=run_results,
+        trend_summary=trend_summary,
+        output_path=framework_root / "results" / "reports" / "index.html",
+        pass_rate_rule=config.reporting.trend_status_pass_rate_rule,
+        min_pass_rate=config.reporting.trend_status_min_pass_rate,
+    )
+    print(f"Executive report: {executive_path}")
+    print(f"Trend dashboard: {trend_path}")
+    return 0
 
 
 def _cmd_synthesize(args: argparse.Namespace) -> int:
@@ -95,14 +138,17 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="Run pytest-bdd evaluations")
-    run_parser.add_argument("--tags", default=None, help="Pytest marker expression (e.g. layer1 and contextual_precision)")
+    run_parser.add_argument(
+        "--tags",
+        default=None,
+        help="Pytest marker expression; supports '@' prefix too (e.g. @sanity and @smoke).",
+    )
     run_parser.add_argument(
         "--feature",
         default=None,
         help="Feature path hint (layer1/layer2 derived from file name when tags are not provided).",
     )
     run_parser.add_argument("--config", default=os.getenv("RAG_EVAL_CONFIG", str(default_config_path())), help="Path to config YAML")
-    run_parser.add_argument("--allure-dir", default="allure-results", help="Allure results output directory")
     run_parser.add_argument(
         "--suite",
         choices=["live", "smoke", "all"],
@@ -118,6 +164,10 @@ def build_parser() -> argparse.ArgumentParser:
     synth_parser.add_argument("--num-questions", type=int, default=None, help="Number of questions to generate")
     synth_parser.add_argument("--config", default=os.getenv("RAG_EVAL_CONFIG", str(default_config_path())), help="Path to config YAML")
     synth_parser.set_defaults(func=_cmd_synthesize)
+
+    report_parser = subparsers.add_parser("report", help="Generate HTML dashboards from saved run artifacts")
+    report_parser.add_argument("--config", default=os.getenv("RAG_EVAL_CONFIG", str(default_config_path())), help="Path to config YAML")
+    report_parser.set_defaults(func=_cmd_report)
 
     return parser
 
