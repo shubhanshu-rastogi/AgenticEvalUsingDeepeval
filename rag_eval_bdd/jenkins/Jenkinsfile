@@ -46,6 +46,16 @@ pipeline {
       }
     }
 
+    stage('Checkout Eval Framework') {
+      steps {
+        dir('rag_eval_bdd') {
+          deleteDir()
+          git branch: 'main',
+              url: 'https://github.com/shubhanshu-rastogi/AgenticEvalUsingDeepeval.git'
+        }
+      }
+    }
+
     stage('Setup Python') {
       steps {
         sh '''
