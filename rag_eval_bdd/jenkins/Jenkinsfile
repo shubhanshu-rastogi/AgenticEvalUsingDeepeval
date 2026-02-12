@@ -1,8 +1,42 @@
 pipeline {
   agent any
 
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '30'))
+  }
+
+  triggers {
+    githubPush()
+  }
+
   parameters {
-    string(name: 'LIVE_PYTEST_TAGS', defaultValue: 'live and (layer1 or layer2)', description: 'Pytest marker expression for live evaluation stage')
+    string(
+      name: 'SMOKE_TAGS',
+      defaultValue: '@smoke',
+      description: 'Marker expression for BDD smoke pack gate. Example: @smoke or (@smoke and @layer1)'
+    )
+    string(
+      name: 'BASE_URL',
+      defaultValue: 'http://localhost:8000',
+      description: 'Demo app backend base URL used by evaluation scenarios.'
+    )
+    string(
+      name: 'EMAIL_RECIPIENTS',
+      defaultValue: '',
+      description: 'Comma-separated recipients for report email. Leave blank to skip email stage.'
+    )
+    booleanParam(
+      name: 'RUN_UNIT_SMOKE',
+      defaultValue: true,
+      description: 'Run deterministic unit smoke tests before BDD smoke gate.'
+    )
+  }
+
+  environment {
+    PYTHONUNBUFFERED = '1'
+    PIP_DISABLE_PIP_VERSION_CHECK = '1'
   }
 
   stages {
@@ -18,51 +52,135 @@ pipeline {
           cd rag_eval_bdd
           python3 -m venv .venv-ci
           . .venv-ci/bin/activate
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
         '''
       }
     }
 
-    stage('Smoke Gate (Deterministic)') {
+    stage('Smoke Gate (Deterministic Unit)') {
+      when {
+        expression { return params.RUN_UNIT_SMOKE }
+      }
       steps {
         sh '''
           cd rag_eval_bdd
           . .venv-ci/bin/activate
-          pytest -c pytest.ini tests -m "smoke" -q
+          make smoke
         '''
       }
     }
 
-    stage('Live Evaluation (Non-blocking)') {
+    stage('Smoke Gate (BDD @smoke)') {
       steps {
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        withCredentials([string(credentialsId: 'openai-api-key', variable: 'OPENAI_API_KEY')]) {
           sh '''
             cd rag_eval_bdd
             . .venv-ci/bin/activate
-            pytest -c pytest.ini steps -m "$LIVE_PYTEST_TAGS" --alluredir=allure-results
+            export BASE_URL="${BASE_URL}"
+            make run-tags TAGS="${SMOKE_TAGS}"
           '''
         }
       }
     }
 
-    stage('Build Allure Report') {
+    stage('Publish HTML In Jenkins') {
+      steps {
+        script {
+          try {
+            publishHTML(target: [
+              allowMissing: false,
+              alwaysLinkToLastBuild: true,
+              keepAll: true,
+              reportDir: 'rag_eval_bdd/results/reports',
+              reportFiles: 'index.html',
+              reportName: 'RAG Executive Report (Current Run)'
+            ])
+          } catch (Exception err) {
+            echo "HTML Publisher plugin missing for executive report: ${err.getMessage()}"
+          }
+
+          try {
+            publishHTML(target: [
+              allowMissing: false,
+              alwaysLinkToLastBuild: true,
+              keepAll: true,
+              reportDir: 'rag_eval_bdd/results/trends',
+              reportFiles: 'last5.html',
+              reportName: 'RAG Trend Dashboard (Last 5)'
+            ])
+          } catch (Exception err) {
+            echo "HTML Publisher plugin missing for trend report: ${err.getMessage()}"
+          }
+        }
+      }
+    }
+
+    stage('Prepare Email Bundle') {
+      when {
+        expression { return params.EMAIL_RECIPIENTS?.trim() }
+      }
       steps {
         sh '''
           cd rag_eval_bdd
-          . .venv-ci/bin/activate
-          allure generate allure-results --clean -o allure-report || true
+          tar -czf results/reports/report_bundle_${BUILD_NUMBER}.tar.gz \
+            results/reports/index.html \
+            results/trends/last5.html \
+            results/reports/technical_logs.json \
+            results/runs \
+            results/index.json \
+            results/current_index.json || true
         '''
+      }
+    }
+
+    stage('Email Reports') {
+      when {
+        expression { return params.EMAIL_RECIPIENTS?.trim() }
+      }
+      steps {
+        script {
+          try {
+            emailext(
+              to: params.EMAIL_RECIPIENTS,
+              subject: "[${env.JOB_NAME}] #${env.BUILD_NUMBER} - Smoke Gate ${currentBuild.currentResult}",
+              mimeType: 'text/html',
+              body: """
+                <p>Build: <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b></p>
+                <p>Status: <b>${currentBuild.currentResult}</b></p>
+                <p>Commit: ${env.GIT_COMMIT ?: 'N/A'}</p>
+                <p>Open in Jenkins:</p>
+                <ul>
+                  <li><a href="${env.BUILD_URL}RAG_Executive_Report__Current_Run_/">Executive Report (Current Run)</a></li>
+                  <li><a href="${env.BUILD_URL}RAG_Trend_Dashboard__Last_5_/">Trend Dashboard (Last 5)</a></li>
+                  <li><a href="${env.BUILD_URL}artifact/rag_eval_bdd/results/reports/technical_logs.json">Technical Logs JSON</a></li>
+                </ul>
+                <p>Reports are attached and also archived as build artifacts.</p>
+              """,
+              attachmentsPattern: 'rag_eval_bdd/results/reports/index.html,rag_eval_bdd/results/trends/last5.html,rag_eval_bdd/results/reports/technical_logs.json,rag_eval_bdd/results/reports/report_bundle_*.tar.gz'
+            )
+          } catch (Exception err) {
+            echo "Email Extension plugin missing or mail setup issue: ${err.getMessage()}"
+          }
+        }
       }
     }
   }
 
   post {
+    success {
+      script {
+        currentBuild.description = "Smoke gate PASS • Reports published"
+      }
+    }
+    unsuccessful {
+      script {
+        currentBuild.description = "Smoke gate FAILED"
+      }
+    }
     always {
-      allure includeProperties: false, jdk: '', results: [[path: 'rag_eval_bdd/allure-results']]
       archiveArtifacts artifacts: 'rag_eval_bdd/results/**', allowEmptyArchive: true
-      archiveArtifacts artifacts: 'rag_eval_bdd/allure-report/**', allowEmptyArchive: true
-      archiveArtifacts artifacts: 'rag_eval_bdd/allure-results/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'rag_eval_bdd/.pytest_cache/**', allowEmptyArchive: true
     }
   }
 }
