@@ -1,20 +1,20 @@
 [
   {
     "id": "GEN_1",
-    "question": "Who specifically cautioned Harry Potter against returning to Hogwarts during his second summer?",
-    "expected_answer": "Dobby, a strange elfish creature, specifically cautioned Harry Potter against returning to Hogwarts during his second summer.",
+    "question": "Identify the dark wizard responsible for the infant Harry Potter's near-fatal attack.",
+    "expected_answer": "The dark wizard responsible for the infant Harry Potter's near-fatal attack is Lord Voldemort.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "source_reference": "session:f24b4233-12c5-4646-97ef-70c8ca17f85b",
     "additional_metadata": {}
   },
   {
     "id": "GEN_2",
-    "question": "How did Dobby\u2019s warnings and actions indirectly lead to Harry\u2019s confinement by the Dursleys?",
-    "expected_answer": "Dobby\u2019s warnings led him to interfere with Harry\u2019s life, including causing trouble that angered the Dursleys. As a result, the Dursleys locked Harry in his room to keep him confined and prevent further issues.",
+    "question": "How do Harry, Ron, and Hermione bond through rule-breaking and troll defense before Christmas?",
+    "expected_answer": "Harry, Ron, and Hermione bond by working together to attack a troll that threatens Hermione, breaking many school rules in the process. This shared experience before Christmas makes them inseparable friends.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "source_reference": "session:f24b4233-12c5-4646-97ef-70c8ca17f85b",
     "additional_metadata": {}
   }
 ]

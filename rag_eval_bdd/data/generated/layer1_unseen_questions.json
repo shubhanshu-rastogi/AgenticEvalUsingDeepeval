@@ -1,20 +1,20 @@
 [
   {
     "id": "GEN_1",
-    "question": "Who instructs Harry in the Patronus Charm amid third-year academic and pet conflicts?",
-    "expected_answer": "Professor Lupin instructs Harry in the Patronus Charm amid the third-year academic pressures and conflicts involving Hermione\u2019s cat Crookshanks and Ron\u2019s rat Scabbers.",
+    "question": "Who is Dobby, and what specific warning does he give Harry Potter about returning to Hogwarts?",
+    "expected_answer": "Dobby is a strange elfish creature who warns Harry Potter not to return to Hogwarts, implying danger if he goes back to school.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "source_reference": "session:f24b4233-12c5-4646-97ef-70c8ca17f85b",
     "additional_metadata": {}
   },
   {
     "id": "GEN_2",
-    "question": "Analyze Hermione\u2019s time management amid third-year academic overload and magical extracurriculars.",
-    "expected_answer": "Hermione manages her heavy third-year academic workload and magical extracurriculars through exceptional organization and dedication, allowing her to attend all her classes despite the overwhelming demands.",
+    "question": "Analyze the psychological effects of prolonged Muggle confinement on young wizards\u2019 magical development.",
+    "expected_answer": "Prolonged Muggle confinement, as seen with Harry Potter's summer at the Dursleys, can lead to feelings of isolation and frustration, potentially hindering a young wizard's confidence and emotional well-being. However, exposure to supportive magical environments, like Harry's time with the Weasleys, helps restore enthusiasm and fosters magical growth.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "source_reference": "session:f24b4233-12c5-4646-97ef-70c8ca17f85b",
     "additional_metadata": {}
   }
 ]

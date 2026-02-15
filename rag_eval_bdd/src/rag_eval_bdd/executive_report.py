@@ -77,6 +77,8 @@ def _normalize_metric(name: str) -> str:
 
 def _infer_data_source(scenario_name: str) -> str:
     lowered = scenario_name.lower()
+    if "unseen" in lowered:
+        return "Unseen Data"
     if "inline" in lowered:
         return "Inline Data"
     if "external" in lowered:
@@ -149,10 +151,14 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
 
     inline_rows = by_type.get("Inline Data", [])
     external_rows = by_type.get("External Data", [])
+    unseen_rows = by_type.get("Unseen Data", [])
     inline_rate = (sum(1 for r in inline_rows if r["status"] == "PASS") / len(inline_rows) * 100.0) if inline_rows else 0.0
     external_rate = (
         sum(1 for r in external_rows if r["status"] == "PASS") / len(external_rows) * 100.0
     ) if external_rows else 0.0
+    unseen_rate = (
+        sum(1 for r in unseen_rows if r["status"] == "PASS") / len(unseen_rows) * 100.0
+    ) if unseen_rows else 0.0
 
     failed_reasons = [
         row["reason"].strip()
@@ -172,6 +178,7 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
         "overall_pass_rate": f"{overall_pass_rate:.2f}%",
         "inline_rate": f"{inline_rate:.2f}%",
         "external_rate": f"{external_rate:.2f}%",
+        "unseen_rate": f"{unseen_rate:.2f}%",
         "top_reasons": top_reasons,
     }
 
@@ -688,6 +695,7 @@ def write_executive_html(
       <article class="summary-card"><span class="label">Pass / Fail / N/A</span><span class="value">{summary["pass_count"]} / {summary["fail_count"]} / {summary["na_count"]}</span></article>
       <article class="summary-card"><span class="label">Inline Data Pass Rate</span><span class="value">{summary["inline_rate"]}</span></article>
       <article class="summary-card"><span class="label">External Data Pass Rate</span><span class="value">{summary["external_rate"]}</span></article>
+      <article class="summary-card"><span class="label">Unseen Data Pass Rate</span><span class="value">{summary["unseen_rate"]}</span></article>
       <article class="summary-card"><span class="label">Top Failure Reasons</span><span class="value" style="font-size: 14px;">{html.escape(summary["top_reasons"])}</span></article>
     </section>
 
