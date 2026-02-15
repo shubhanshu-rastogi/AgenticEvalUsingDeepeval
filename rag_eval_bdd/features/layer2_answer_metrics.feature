@@ -14,7 +14,7 @@ Feature: Layer 2 answer quality evaluation
     Then metric "answer_relevancy" should be >= configured threshold
     And save results for reporting
 
-  @sanity @answer_relevancy @faithfulness @completeness
+  @sanity @answer_relevancy @faithfulness @completeness @regression
   Scenario: Evaluate layer2 answer metrics from inline dataset table
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -31,11 +31,22 @@ Feature: Layer 2 answer quality evaluation
     And metric "completeness" should be >= configured threshold
     And save results for reporting
 
-  @regression @answer_relevancy @faithfulness @completeness
+  @regression @answer_relevancy @faithfulness @completeness @regression
   Scenario: Evaluate layer2 answer metrics from external dataset file
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
     And I load dataset "rag_eval_bdd/data/datasets/layer2_questions.json"
+    When I evaluate all questions
+    Then metric "answer_relevancy" should be >= configured threshold
+    And metric "faithfulness" should be >= configured threshold
+    And metric "completeness" should be >= configured threshold
+    And save results for reporting
+
+  @unseen @answer_relevancy @faithfulness @completeness
+  Scenario: Evaluate layer2 answer metrics on runtime unseen dataset
+    Given backend is reachable
+    And I use latest uploaded session from application UI
+    And I generate unseen dataset for layer "layer2" from uploaded documents
     When I evaluate all questions
     Then metric "answer_relevancy" should be >= configured threshold
     And metric "faithfulness" should be >= configured threshold

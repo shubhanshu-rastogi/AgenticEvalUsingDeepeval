@@ -2,6 +2,8 @@ backend:
   base_url: "http://localhost:8000"
   upload_endpoint: "/upload"
   ask_endpoint: "/ask"
+  current_session_endpoint: "/session/current"
+  session_chunks_endpoint: "/session/chunks"
   timeout_s: 120
   retries: 3
   backoff_s: 1.0

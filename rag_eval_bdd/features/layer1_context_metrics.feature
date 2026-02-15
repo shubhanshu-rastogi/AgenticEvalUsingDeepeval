@@ -14,7 +14,7 @@ Feature: Layer 1 retrieval quality evaluation
     Then metric "contextual_precision" should be >= configured threshold
     And save results for reporting
 
-  @sanity @contextual_precision @contextual_recall @contextual_relevancy
+  @sanity @contextual_precision @contextual_recall @contextual_relevancy @regression
   Scenario: Evaluate layer1 contextual metrics from inline dataset table
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -31,11 +31,22 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_relevancy" should be >= configured threshold
     Then save results for reporting
 
-  @regression @contextual_precision @contextual_recall @contextual_relevancy
+  @regression @contextual_precision @contextual_recall @contextual_relevancy @regression
   Scenario: Evaluate layer1 contextual metrics from external dataset file
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
     And I load dataset "rag_eval_bdd/data/datasets/layer1_questions.json"
+    When I evaluate all questions
+    Then metric "contextual_precision" should be >= configured threshold
+    And metric "contextual_recall" should be >= configured threshold
+    And metric "contextual_relevancy" should be >= configured threshold
+    And save results for reporting
+
+  @unseen @contextual_precision @contextual_recall @contextual_relevancy
+  Scenario: Evaluate layer1 contextual metrics on runtime unseen dataset
+    Given backend is reachable
+    And I use latest uploaded session from application UI
+    And I generate unseen dataset for layer "layer1" from uploaded documents
     When I evaluate all questions
     Then metric "contextual_precision" should be >= configured threshold
     And metric "contextual_recall" should be >= configured threshold

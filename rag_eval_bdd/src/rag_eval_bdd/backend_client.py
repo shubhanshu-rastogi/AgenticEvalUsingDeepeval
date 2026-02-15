@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 import os
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -96,3 +96,47 @@ class BackendClient:
         if use_cache:
             self._ask_cache[cache_key] = deepcopy(response_payload)
         return payload, response_payload
+
+    def get_current_session(self) -> Dict[str, Any]:
+        response = self.session.get(
+            self._url(self.config.current_session_endpoint),
+            timeout=self.config.timeout_s,
+        )
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            if response.status_code == 404:
+                raise RuntimeError(
+                    "Backend endpoint '/session/current' is unavailable or no active UI session exists. "
+                    "Restart backend after pulling latest changes, upload a file in UI, then retry."
+                ) from exc
+            raise
+        payload = response.json()
+        session_id = payload.get("session_id")
+        if not session_id:
+            raise RuntimeError("Current-session response does not contain session_id")
+        return payload
+
+    def get_session_chunks(self, limit: int | None = None) -> List[Dict[str, Any]]:
+        params: Dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = int(limit)
+        response = self.session.get(
+            self._url(self.config.session_chunks_endpoint),
+            params=params,
+            timeout=self.config.timeout_s,
+        )
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            if response.status_code == 404:
+                raise RuntimeError(
+                    "Backend endpoint '/session/chunks' is unavailable or no active UI session exists. "
+                    "Restart backend after pulling latest changes, upload a file in UI, then retry."
+                ) from exc
+            raise
+        payload = response.json()
+        chunks = payload.get("chunks", [])
+        if not isinstance(chunks, list):
+            raise RuntimeError("Session-chunks response does not contain a valid chunks list")
+        return chunks

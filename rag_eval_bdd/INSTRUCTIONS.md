@@ -42,6 +42,9 @@ make run-tags TAGS='@smoke'
 make run-tags TAGS='@sanity and @layer1'
 make run-tags TAGS='@regression and @layer2'
 make run-tags TAGS='@contextual_precision'
+make run-tags TAGS='@unseen and @layer1'
+make run-tags TAGS='@unseen and @layer2'
+make run-tags TAGS='@unseen'
 ```
 
 You can combine tags using `and`, `or`, `not`.
@@ -60,6 +63,17 @@ You can combine tags using `and`, `or`, `not`.
   - `@answer_relevancy`
   - `@faithfulness`
   - `@completeness`
+- `@unseen`: generates a small runtime dataset from the latest document uploaded in app UI
+
+### Runtime unseen dataset generation
+
+- Document/session is auto-picked from latest upload in application UI (`http://localhost:5173`).
+- Question count per layer defaults to `2`.
+- Override count with `RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER=<N>`.
+- Optional fallback file-path mode: set `RAG_EVAL_UNSEEN_DOCUMENT` and use env upload step.
+- Generated files:
+  - `data/generated/layer1_unseen_questions.json`
+  - `data/generated/layer2_unseen_questions.json`
 
 ## 5) Reporting behavior
 

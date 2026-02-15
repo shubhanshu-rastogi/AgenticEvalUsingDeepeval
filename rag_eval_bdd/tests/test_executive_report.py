@@ -85,5 +85,7 @@ def test_write_executive_html_contains_business_table_and_technical_logs(tmp_pat
     assert "count-na" in html
     assert "Technical Logs" in html
     assert "Complete Technical Logs" in html
+    assert "Open Trend Dashboard (Last 5 Runs)" in html
+    assert "../trends/last5.html" in html
     assert "Download Full Technical Logs (JSON)" in html
     assert (tmp_path / "reports" / "technical_logs.json").exists()

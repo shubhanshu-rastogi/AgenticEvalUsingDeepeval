@@ -58,6 +58,63 @@ def _collect_documents(input_path: Path) -> List[str]:
     return docs
 
 
+def _build_rows_from_goldens(
+    goldens: list[Any],
+    num_questions: int,
+    source_reference: str,
+) -> List[DatasetRow]:
+    rows: List[DatasetRow] = []
+    for idx, golden in enumerate(goldens[:num_questions], start=1):
+        custom = getattr(golden, "custom_column_key_values", None) or {}
+        rows.append(
+            DatasetRow(
+                id=f"GEN_{idx}",
+                question=str(getattr(golden, "input", "")).strip(),
+                expected_answer=(getattr(golden, "expected_output", None) or None),
+                category=(custom.get("category") if isinstance(custom, dict) else None),
+                source_reference=(getattr(golden, "source_file", None) or source_reference),
+            )
+        )
+    return rows
+
+
+def _write_rows(rows: List[DatasetRow], output_path: Path) -> None:
+    payload = [row.model_dump() for row in rows]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2))
+
+
+def synthesize_dataset_from_contexts(
+    contexts: List[str],
+    output_path: Path,
+    num_questions: int,
+    model: Optional[str] = None,
+    source_reference: str = "active_session",
+) -> List[DatasetRow]:
+    try:
+        from deepeval.synthesizer import Synthesizer
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError("DeepEval Synthesizer is not available in this environment") from exc
+
+    clean_contexts = [ctx.strip() for ctx in contexts if str(ctx).strip()]
+    if not clean_contexts:
+        raise ValueError("No non-empty contexts were provided to synthesize questions.")
+
+    synthesizer = Synthesizer(model=model)
+    context_blocks = [[ctx] for ctx in clean_contexts]
+    goldens = synthesizer.generate_goldens_from_contexts(
+        contexts=context_blocks,
+        include_expected_output=True,
+    )
+    rows = _build_rows_from_goldens(
+        goldens=goldens,
+        num_questions=num_questions,
+        source_reference=source_reference,
+    )
+    _write_rows(rows=rows, output_path=output_path)
+    return rows
+
+
 def synthesize_dataset(
     input_path: Path,
     output_path: Path,
@@ -88,20 +145,10 @@ def synthesize_dataset(
     else:
         raise ValueError(f"Unsupported synthesize input: {input_path}")
 
-    rows: List[DatasetRow] = []
-    for idx, golden in enumerate(goldens[:num_questions], start=1):
-        custom = getattr(golden, "custom_column_key_values", None) or {}
-        rows.append(
-            DatasetRow(
-                id=f"GEN_{idx}",
-                question=str(getattr(golden, "input", "")).strip(),
-                expected_answer=(getattr(golden, "expected_output", None) or None),
-                category=(custom.get("category") if isinstance(custom, dict) else None),
-                source_reference=(getattr(golden, "source_file", None) or str(input_path)),
-            )
-        )
-
-    payload = [row.model_dump() for row in rows]
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2))
+    rows = _build_rows_from_goldens(
+        goldens=goldens,
+        num_questions=num_questions,
+        source_reference=str(input_path),
+    )
+    _write_rows(rows=rows, output_path=output_path)
     return rows

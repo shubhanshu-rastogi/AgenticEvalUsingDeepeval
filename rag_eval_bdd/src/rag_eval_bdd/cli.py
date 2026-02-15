@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
 from typing import Optional
 
@@ -32,6 +33,39 @@ def _normalize_marker_expression(expression: Optional[str]) -> Optional[str]:
     normalized = re.sub(r"@([A-Za-z_][A-Za-z0-9_]*)", r"\1", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
     return normalized or None
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _should_auto_open_report() -> bool:
+    if _env_flag("CI", default=False):
+        return False
+    return _env_flag("RAG_EVAL_AUTO_OPEN_REPORT", default=True)
+
+
+def _auto_open_executive_report(framework_root: Path) -> None:
+    if not _should_auto_open_report():
+        return
+
+    report_path = framework_root / "results" / "reports" / "index.html"
+    if not report_path.exists():
+        return
+
+    report_uri = report_path.resolve().as_uri()
+    try:
+        opened = webbrowser.open(report_uri)
+    except Exception:
+        opened = False
+
+    if opened:
+        print(f"Opened executive report in browser: {report_path}")
+    else:
+        print(f"Executive report ready: {report_path}")
 
 
 def _run_pytest(
@@ -74,13 +108,16 @@ def _run_pytest(
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    return _run_pytest(
+    framework_root = get_framework_root()
+    exit_code = _run_pytest(
         tags=args.tags,
         feature=args.feature,
         config_path=args.config,
         pytest_args=args.pytest_args,
         suite=args.suite,
     )
+    _auto_open_executive_report(framework_root=framework_root)
+    return exit_code
 
 
 def _cmd_report(args: argparse.Namespace) -> int:

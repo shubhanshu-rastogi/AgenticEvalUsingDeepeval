@@ -1,0 +1,20 @@
+[
+  {
+    "id": "GEN_1",
+    "question": "Who specifically cautioned Harry Potter against returning to Hogwarts during his second summer?",
+    "expected_answer": "Dobby, a strange elfish creature, specifically cautioned Harry Potter against returning to Hogwarts during his second summer.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_2",
+    "question": "How did Dobby\u2019s warnings and actions indirectly lead to Harry\u2019s confinement by the Dursleys?",
+    "expected_answer": "Dobby\u2019s warnings led him to interfere with Harry\u2019s life, including causing trouble that angered the Dursleys. As a result, the Dursleys locked Harry in his room to keep him confined and prevent further issues.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "additional_metadata": {}
+  }
+]

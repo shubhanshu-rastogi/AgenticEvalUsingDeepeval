@@ -636,6 +636,11 @@ def write_executive_html(
       color: var(--muted);
       font-size: 12px;
     }}
+    .footer-links {{
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }}
     .footer-link {{
       color: var(--accent);
       font-weight: 600;
@@ -776,7 +781,10 @@ def write_executive_html(
 
     <div class="report-footer">
       <span>HTML report is generated from saved run artifacts under <code>results/runs/</code>.</span>
-      <a class="footer-link" href="./technical_logs.json">Download Full Technical Logs (JSON)</a>
+      <div class="footer-links">
+        <a class="footer-link" href="../trends/last5.html">Open Trend Dashboard (Last 5 Runs)</a>
+        <a class="footer-link" href="./technical_logs.json">Download Full Technical Logs (JSON)</a>
+      </div>
     </div>
   </div>
   <script>

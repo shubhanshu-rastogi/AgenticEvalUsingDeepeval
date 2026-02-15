@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from rag_eval_bdd.reporting import (
     attach_text,
     write_trend_html,
 )
+from rag_eval_bdd.synthesize import synthesize_dataset, synthesize_dataset_from_contexts
 
 
 scenarios("../features/layer1_context_metrics.feature")
@@ -95,6 +97,130 @@ def given_documents_uploaded(
 
     scenario_state.session_id = session_id
     scenario_state.uploaded_documents.append(str(resolved))
+
+
+@given(parsers.parse('documents are uploaded from env "{env_var}"'))
+def given_documents_uploaded_from_env(
+    env_var: str,
+    backend_client,
+    scenario_state,
+    repo_root: Path,
+    app_config,
+    upload_session_cache,
+):
+    document_path = os.getenv(env_var)
+    if not document_path or not document_path.strip():
+        raise AssertionError(f"Environment variable '{env_var}' is not set. Provide a document path to upload.")
+
+    given_documents_uploaded(
+        document_path=document_path.strip(),
+        backend_client=backend_client,
+        scenario_state=scenario_state,
+        repo_root=repo_root,
+        app_config=app_config,
+        upload_session_cache=upload_session_cache,
+    )
+
+
+@given("I use latest uploaded session from application UI")
+def given_use_latest_uploaded_session_from_application_ui(backend_client, scenario_state):
+    payload = backend_client.get_current_session()
+    session_id = payload.get("session_id")
+    if not session_id:
+        raise AssertionError("Backend did not provide an active session_id. Upload a file in UI first.")
+
+    source_filename = payload.get("source_filename")
+    scenario_state.session_id = str(session_id)
+    attach_text("ui_session_id", str(session_id))
+    if source_filename:
+        attach_text("ui_source_filename", str(source_filename))
+
+
+def _unseen_questions_per_layer() -> int:
+    raw = os.getenv("RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER")
+    if raw is None or not raw.strip():
+        return 2
+    parsed = int(raw.strip())
+    if parsed <= 0:
+        raise ValueError("RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER must be a positive integer")
+    return parsed
+
+
+def _unseen_context_chunk_limit() -> int:
+    raw = os.getenv("RAG_EVAL_UNSEEN_CONTEXT_CHUNK_LIMIT")
+    if raw is None or not raw.strip():
+        return 24
+    parsed = int(raw.strip())
+    if parsed <= 0:
+        raise ValueError("RAG_EVAL_UNSEEN_CONTEXT_CHUNK_LIMIT must be a positive integer")
+    return parsed
+
+
+@given(parsers.parse('I generate unseen dataset for layer "{layer_name}" from uploaded documents'))
+def given_generate_unseen_dataset_for_layer(
+    layer_name: str,
+    backend_client,
+    scenario_state,
+    framework_root: Path,
+    app_config,
+):
+    if not scenario_state.uploaded_documents and not scenario_state.session_id:
+        raise AssertionError(
+            "No uploaded document path or UI session available. Upload documents before generating unseen dataset."
+        )
+
+    normalized_layer = layer_name.strip().lower()
+    if normalized_layer not in {"layer1", "layer2"}:
+        raise AssertionError(f"Unsupported layer '{layer_name}'. Use 'layer1' or 'layer2'.")
+
+    question_count = _unseen_questions_per_layer()
+    output_path = framework_root / "data" / "generated" / f"{normalized_layer}_unseen_questions.json"
+
+    if scenario_state.uploaded_documents:
+        document_path = Path(scenario_state.uploaded_documents[-1]).resolve()
+        rows = synthesize_dataset(
+            input_path=document_path,
+            output_path=output_path,
+            num_questions=question_count,
+            model=app_config.model,
+        )
+        source_reference = str(document_path)
+    else:
+        chunk_limit = _unseen_context_chunk_limit()
+        chunks = backend_client.get_session_chunks(limit=chunk_limit)
+        contexts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
+        if not contexts:
+            raise AssertionError(
+                "No retrieval chunks found for active UI session. Upload a document in UI and try again."
+            )
+        source_reference = f"session:{scenario_state.session_id}"
+        rows = synthesize_dataset_from_contexts(
+            contexts=contexts,
+            output_path=output_path,
+            num_questions=question_count,
+            model=app_config.model,
+            source_reference=source_reference,
+        )
+
+    if len(rows) < question_count:
+        raise AssertionError(
+            f"Synthesizer generated only {len(rows)} rows, expected at least {question_count}."
+        )
+
+    prefix = "L1_GEN" if normalized_layer == "layer1" else "L2_GEN"
+    scenario_state.dataset_rows = [
+        row.model_copy(
+            update={
+                "id": f"{prefix}_{index}",
+                "category": row.category or normalized_layer,
+                "source_reference": row.source_reference or source_reference,
+            }
+        )
+        for index, row in enumerate(rows[:question_count], start=1)
+    ]
+
+    attach_text("unseen_dataset_path", str(output_path))
+    attach_json("unseen_dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
 
 
 @given(parsers.parse('I load dataset "{dataset_ref}"'))

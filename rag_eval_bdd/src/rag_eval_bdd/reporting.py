@@ -124,16 +124,33 @@ def _format_delta(delta: float | None) -> str:
     return f"{sign}{delta:.2f}"
 
 
+def _metric_display_name(metric_name: str) -> str:
+    return metric_name.replace("_", " ").title()
+
+
 def _svg_line_path(points: list[tuple[float, float]]) -> str:
     if not points:
         return ""
     if len(points) == 1:
         x, y = points[0]
         return f"M{x:.2f},{y:.2f}"
-    return " ".join(
-        [f"M{points[0][0]:.2f},{points[0][1]:.2f}"]
-        + [f"L{x:.2f},{y:.2f}" for x, y in points[1:]]
-    )
+
+    commands = [f"M{points[0][0]:.2f},{points[0][1]:.2f}"]
+    for idx in range(len(points) - 1):
+        p0 = points[idx - 1] if idx > 0 else points[idx]
+        p1 = points[idx]
+        p2 = points[idx + 1]
+        p3 = points[idx + 2] if idx + 2 < len(points) else p2
+
+        c1x = p1[0] + (p2[0] - p0[0]) / 6.0
+        c1y = p1[1] + (p2[1] - p0[1]) / 6.0
+        c2x = p2[0] - (p3[0] - p1[0]) / 6.0
+        c2y = p2[1] - (p3[1] - p1[1]) / 6.0
+
+        commands.append(
+            f"C{c1x:.2f},{c1y:.2f} {c2x:.2f},{c2y:.2f} {p2[0]:.2f},{p2[1]:.2f}"
+        )
+    return " ".join(commands)
 
 
 def _build_metric_svg(
@@ -201,7 +218,7 @@ def _build_metric_svg(
             f"{html.escape(_short_timestamp(point.timestamp))}</text>"
         )
 
-    metric_label = html.escape(metric_name.replace("_", " ").title())
+    metric_label = html.escape(_metric_display_name(metric_name))
     return f"""
     <svg viewBox="0 0 {width} {height}" class="trend-svg" role="img" aria-label="Trend for {metric_label}">
       <rect x="0" y="0" width="{width}" height="{height}" class="plot-bg"></rect>
@@ -209,8 +226,8 @@ def _build_metric_svg(
       <line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" class="axis-line"></line>
       <line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="axis-line"></line>
       {threshold_line}
-      <path d="{_svg_line_path(avg_points)}" class="avg-line"></path>
-      <path d="{_svg_line_path(pass_points)}" class="pass-line"></path>
+      <path d="{_svg_line_path(avg_points)}" class="avg-line smooth-line"></path>
+      <path d="{_svg_line_path(pass_points)}" class="pass-line smooth-line"></path>
       {''.join(circles)}
       <g transform="translate({left + 8}, {top + 16})">
         <rect x="0" y="-10" width="12" height="3" class="avg-line"></rect>
@@ -224,12 +241,184 @@ def _build_metric_svg(
     """
 
 
+def _derive_shared_threshold(trend_summary: TrendSummary) -> float:
+    rounded_thresholds: list[float] = []
+    for metric in trend_summary.metrics:
+        if not metric.points:
+            continue
+        latest_threshold = metric.points[-1].threshold
+        if latest_threshold is None:
+            continue
+        rounded_thresholds.append(round(_safe_score(latest_threshold), 2))
+
+    if not rounded_thresholds:
+        return 0.70
+
+    frequency: dict[float, int] = {}
+    for threshold in rounded_thresholds:
+        frequency[threshold] = frequency.get(threshold, 0) + 1
+
+    ranked = sorted(frequency.items(), key=lambda item: (-item[1], item[0]))
+    return float(ranked[0][0])
+
+
+def _build_combined_trend_card(
+    trend_summary: TrendSummary,
+    pass_rate_rule: str,
+    min_pass_rate: float,
+) -> str:
+    timeline_entries: dict[tuple[str, str], str] = {}
+    for metric in trend_summary.metrics:
+        for point in metric.points:
+            timeline_entries[(point.run_id, point.timestamp)] = point.timestamp
+
+    ordered_timeline = sorted(timeline_entries.keys(), key=lambda key: key[1])
+    if trend_summary.keep_last_n > 0:
+        ordered_timeline = ordered_timeline[-trend_summary.keep_last_n :]
+
+    if not ordered_timeline:
+        return ""
+
+    width, height = 1080, 300
+    left, right, top, bottom = 58, 24, 30, 48
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+
+    def x_pos(i: int) -> float:
+        if len(ordered_timeline) == 1:
+            return left + (plot_w / 2.0)
+        return left + (plot_w * i / (len(ordered_timeline) - 1))
+
+    def y_pos(v: float) -> float:
+        return top + (1.0 - v) * plot_h
+
+    grid_lines: list[str] = []
+    for tick in [0.0, 0.25, 0.5, 0.75, 1.0]:
+        y = y_pos(tick)
+        grid_lines.append(
+            f"<line x1='{left}' y1='{y:.2f}' x2='{left + plot_w}' y2='{y:.2f}' class='grid-line' />"
+        )
+        grid_lines.append(f"<text x='10' y='{y + 4:.2f}' class='axis-label'>{tick:.2f}</text>")
+
+    x_labels = []
+    for idx, (_, timestamp) in enumerate(ordered_timeline):
+        x = x_pos(idx)
+        x_labels.append(
+            f"<text x='{x:.2f}' y='{height - 14}' text-anchor='middle' class='axis-label'>"
+            f"{html.escape(_short_timestamp(timestamp))}</text>"
+        )
+
+    shared_threshold = _derive_shared_threshold(trend_summary)
+    threshold_y = y_pos(shared_threshold)
+    threshold_line = (
+        f"<line x1='{left}' y1='{threshold_y:.2f}' x2='{left + plot_w}' y2='{threshold_y:.2f}' "
+        f"class='threshold-line' />"
+    )
+
+    palette = [
+        "#7c83ff",
+        "#34d399",
+        "#f59e0b",
+        "#f472b6",
+        "#22d3ee",
+        "#f97316",
+        "#a78bfa",
+        "#eab308",
+        "#fb7185",
+        "#60a5fa",
+    ]
+    metric_lines: list[str] = []
+    metric_dots: list[str] = []
+    legend_items: list[str] = []
+    visible_metric_count = 0
+
+    for idx, metric in enumerate(sorted(trend_summary.metrics, key=lambda item: item.metric_name)):
+        color = palette[idx % len(palette)]
+        point_lookup = {(point.run_id, point.timestamp): point for point in metric.points}
+        coordinates: list[tuple[float, float]] = []
+        points_for_status = []
+        for run_idx, timeline_key in enumerate(ordered_timeline):
+            point = point_lookup.get(timeline_key)
+            if point is None or point.avg_score is None:
+                continue
+            x = x_pos(run_idx)
+            y = y_pos(_safe_score(point.avg_score))
+            coordinates.append((x, y))
+            points_for_status.append((point, x, y))
+
+        if len(coordinates) < 1:
+            continue
+
+        visible_metric_count += 1
+        metric_lines.append(
+            f"<path d='{_svg_line_path(coordinates)}' class='combined-line smooth-line' style='stroke: {color};'></path>"
+        )
+        for point, x, y in points_for_status:
+            _, status_class = _status(
+                point.avg_score,
+                shared_threshold,
+                pass_rate=point.pass_rate,
+                pass_rate_rule=pass_rate_rule,
+                min_pass_rate=min_pass_rate,
+            )
+            metric_dots.append(
+                f"<circle cx='{x:.2f}' cy='{y:.2f}' r='4.3' class='dot {status_class}' style='fill: {color};'></circle>"
+            )
+
+        legend_items.append(
+            "<span class='legend-item'>"
+            f"<span class='legend-swatch' style='background: {color};'></span>"
+            f"{html.escape(_metric_display_name(metric.metric_name))}"
+            "</span>"
+        )
+
+    if visible_metric_count == 0:
+        return ""
+
+    svg = f"""
+    <svg viewBox="0 0 {width} {height}" class="trend-svg combined-trend-svg" role="img" aria-label="All metrics trend over last runs">
+      <rect x="0" y="0" width="{width}" height="{height}" class="plot-bg"></rect>
+      {''.join(grid_lines)}
+      <line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" class="axis-line"></line>
+      <line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="axis-line"></line>
+      {threshold_line}
+      {''.join(metric_lines)}
+      {''.join(metric_dots)}
+      {''.join(x_labels)}
+    </svg>
+    """
+
+    return f"""
+    <section class="metric-card combined-card">
+      <div class="metric-header">
+        <h3>All Metrics (Last {len(ordered_timeline)} Runs)</h3>
+        <span class="status-pill status-na">Shared Threshold: {shared_threshold:.2f}</span>
+      </div>
+      <div class="combined-legend">
+        {''.join(legend_items)}
+        <span class='legend-item'>
+          <span class='legend-swatch threshold-swatch'></span>
+          Shared Threshold ({shared_threshold:.2f})
+        </span>
+      </div>
+      <div class="chart-wrap">
+        {svg}
+      </div>
+    </section>
+    """
+
+
 def write_trend_html(
     trend_summary: TrendSummary,
     output_path: Path,
     pass_rate_rule: str = "min_pass_rate",
     min_pass_rate: float = 100.0,
 ) -> Path:
+    combined_trend_card = _build_combined_trend_card(
+        trend_summary=trend_summary,
+        pass_rate_rule=pass_rate_rule,
+        min_pass_rate=min_pass_rate,
+    )
     metric_cards: List[str] = []
     for metric in trend_summary.metrics:
         points = metric.points
@@ -288,7 +477,7 @@ def write_trend_html(
                 "</tr>"
             )
 
-        metric_name_text = html.escape(metric.metric_name.replace("_", " ").title())
+        metric_name_text = html.escape(_metric_display_name(metric.metric_name))
         latest_score_text = "N/A" if latest_score is None else f"{latest_score:.4f}"
         latest_pass_rate_text = "N/A" if latest_pass_rate is None else f"{latest_pass_rate:.2f}%"
         latest_threshold_text = "N/A" if latest_threshold is None else f"{latest_threshold:.2f}"
@@ -372,8 +561,14 @@ def write_trend_html(
     .legend-label {{ fill: #cbd5e1; font-size: 11px; }}
     .avg-line {{ fill: none; stroke: var(--line-avg); stroke-width: 2.5; }}
     .pass-line {{ fill: none; stroke: var(--line-pass); stroke-width: 2; }}
+    .smooth-line {{ stroke-linecap: round; stroke-linejoin: round; }}
+    .combined-line {{ fill: none; stroke-width: 2.6; opacity: 0.96; }}
     .threshold-line {{ stroke: var(--line-threshold); stroke-width: 1.5; stroke-dasharray: 5 5; }}
     .threshold-line-fill {{ fill: var(--line-threshold); }}
+    .combined-legend {{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }}
+    .legend-item {{ display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #dbe7ff; }}
+    .legend-swatch {{ width: 12px; height: 12px; border-radius: 3px; display: inline-block; }}
+    .threshold-swatch {{ background: var(--line-threshold); border: 1px dashed #fda4af; }}
     .dot.status-pass {{ fill: var(--ok); stroke: #0f172a; stroke-width: 1.5; }}
     .dot.status-fail {{ fill: var(--bad); stroke: #0f172a; stroke-width: 1.5; }}
     .dot.status-na {{ fill: #9ca3af; stroke: #0f172a; stroke-width: 1.5; }}
@@ -393,6 +588,7 @@ def write_trend_html(
     <span>Metrics: {metric_count}</span>
     <span>Window: last {runs_count} runs</span>
   </div>
+  {combined_trend_card}
   {"".join(metric_cards)}
 </body>
 </html>

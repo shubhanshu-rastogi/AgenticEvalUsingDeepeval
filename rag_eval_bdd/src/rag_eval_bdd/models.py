@@ -9,6 +9,8 @@ class BackendConfig(BaseModel):
     base_url: str = "http://localhost:8000"
     upload_endpoint: str = "/upload"
     ask_endpoint: str = "/ask"
+    current_session_endpoint: str = "/session/current"
+    session_chunks_endpoint: str = "/session/chunks"
     timeout_s: int = 120
     retries: int = 3
     backoff_s: float = 1.0

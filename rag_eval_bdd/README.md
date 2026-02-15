@@ -80,12 +80,18 @@ make run-tags TAGS='@smoke'
 make run-tags TAGS='@sanity and @layer1'
 make run-tags TAGS='@regression and @layer2'
 make run-tags TAGS='@contextual_precision'
+make run-tags TAGS='@unseen and @layer1'
+make run-tags TAGS='@unseen and @layer2'
+make run-tags TAGS='@unseen'
 ```
 
 Notes:
 - `@tag` expressions are accepted directly.
 - Comma-separated tags are treated as OR.
 - Layer and metric tags can be combined.
+- Runtime unseen mode auto-picks the latest document uploaded in the application UI (`http://localhost:5173`).
+- Runtime unseen generation uses `2` questions per layer by default. Override with `RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER=<N>`.
+- Optional fallback (file-path mode): set `RAG_EVAL_UNSEEN_DOCUMENT` and use the env-based upload step.
 
 ## Tag conventions
 
@@ -101,6 +107,7 @@ Notes:
   - `@answer_relevancy`
   - `@faithfulness`
   - `@completeness`
+- `@unseen`: runtime-generated dataset from the latest document uploaded in application UI
 
 ## Current smoke design
 
@@ -119,6 +126,9 @@ This keeps smoke runs fast and predictable.
 - Dataset files:
   - `data/datasets/layer1_questions.json`
   - `data/datasets/layer2_questions.json`
+  - Runtime-generated unseen files:
+    - `data/generated/layer1_unseen_questions.json`
+    - `data/generated/layer2_unseen_questions.json`
 
 ## Configuration
 

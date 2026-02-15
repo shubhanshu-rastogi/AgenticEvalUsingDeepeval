@@ -1,0 +1,20 @@
+[
+  {
+    "id": "GEN_1",
+    "question": "Who instructs Harry in the Patronus Charm amid third-year academic and pet conflicts?",
+    "expected_answer": "Professor Lupin instructs Harry in the Patronus Charm amid the third-year academic pressures and conflicts involving Hermione\u2019s cat Crookshanks and Ron\u2019s rat Scabbers.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_2",
+    "question": "Analyze Hermione\u2019s time management amid third-year academic overload and magical extracurriculars.",
+    "expected_answer": "Hermione manages her heavy third-year academic workload and magical extracurriculars through exceptional organization and dedication, allowing her to attend all her classes despite the overwhelming demands.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:88e20b7e-392f-426b-a9aa-9b5b52c32657",
+    "additional_metadata": {}
+  }
+]

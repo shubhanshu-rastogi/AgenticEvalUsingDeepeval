@@ -43,6 +43,10 @@ def test_write_trend_html_contains_colored_dashboard(tmp_path: Path):
     assert "RAG Eval Trend Dashboard" in html
     assert "status-fail" in html
     assert "trend-svg" in html
+    assert "combined-trend-svg" in html
+    assert "All Metrics (Last" in html
+    assert "Shared Threshold:" in html
+    assert "smooth-line" in html
     assert "Consistency (1 SD)" in html
 
 
