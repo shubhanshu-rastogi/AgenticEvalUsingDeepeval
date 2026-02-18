@@ -42,11 +42,11 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_relevancy" should be >= configured threshold
     And save results for reporting
 
-  @unseen @contextual_precision @contextual_recall @contextual_relevancy
-  Scenario: Evaluate layer1 contextual metrics on runtime unseen dataset
+  @live @contextual_precision @contextual_recall @contextual_relevancy
+  Scenario: Evaluate layer1 contextual metrics on runtime live dataset
     Given backend is reachable
     And I use latest uploaded session from application UI
-    And I generate unseen dataset for layer "layer1" from uploaded documents
+    And I generate live dataset for layer "layer1" from uploaded documents
     When I evaluate all questions
     Then metric "contextual_precision" should be >= configured threshold
     And metric "contextual_recall" should be >= configured threshold

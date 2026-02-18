@@ -1,0 +1,20 @@
+[
+  {
+    "id": "GEN_1",
+    "question": "If Jansen had missed the catch at 19.5 over, how might Pandya\u2019s innings have changed?",
+    "expected_answer": "If Jansen had missed the catch at 19.5 overs, Hardik Pandya would have continued his aggressive innings beyond 30 runs off 10 balls, potentially adding more boundaries and sixes, further boosting the team's total.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_2",
+    "question": "If Hardik Pandya missed the six at 19.4, how would that alter his cameo impact?",
+    "expected_answer": "If Hardik Pandya had missed the six at 19.4, his cameo impact would have been less powerful, reducing his total from 30 runs off 10 balls and potentially lowering the momentum gained from that aggressive shot.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "additional_metadata": {}
+  }
+]

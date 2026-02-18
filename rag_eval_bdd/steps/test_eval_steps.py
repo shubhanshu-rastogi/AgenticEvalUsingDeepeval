@@ -136,28 +136,35 @@ def given_use_latest_uploaded_session_from_application_ui(backend_client, scenar
         attach_text("ui_source_filename", str(source_filename))
 
 
-def _unseen_questions_per_layer() -> int:
-    raw = os.getenv("RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER")
+def _live_questions_per_layer() -> int:
+    raw = os.getenv("RAG_EVAL_LIVE_QUESTIONS_PER_LAYER")
+    if raw is None or not raw.strip():
+        # Backward-compatible fallback
+        raw = os.getenv("RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER")
     if raw is None or not raw.strip():
         return 2
     parsed = int(raw.strip())
     if parsed <= 0:
-        raise ValueError("RAG_EVAL_UNSEEN_QUESTIONS_PER_LAYER must be a positive integer")
+        raise ValueError("RAG_EVAL_LIVE_QUESTIONS_PER_LAYER must be a positive integer")
     return parsed
 
 
-def _unseen_context_chunk_limit() -> int:
-    raw = os.getenv("RAG_EVAL_UNSEEN_CONTEXT_CHUNK_LIMIT")
+def _live_context_chunk_limit() -> int:
+    raw = os.getenv("RAG_EVAL_LIVE_CONTEXT_CHUNK_LIMIT")
+    if raw is None or not raw.strip():
+        # Backward-compatible fallback
+        raw = os.getenv("RAG_EVAL_UNSEEN_CONTEXT_CHUNK_LIMIT")
     if raw is None or not raw.strip():
         return 24
     parsed = int(raw.strip())
     if parsed <= 0:
-        raise ValueError("RAG_EVAL_UNSEEN_CONTEXT_CHUNK_LIMIT must be a positive integer")
+        raise ValueError("RAG_EVAL_LIVE_CONTEXT_CHUNK_LIMIT must be a positive integer")
     return parsed
 
 
+@given(parsers.parse('I generate live dataset for layer "{layer_name}" from uploaded documents'))
 @given(parsers.parse('I generate unseen dataset for layer "{layer_name}" from uploaded documents'))
-def given_generate_unseen_dataset_for_layer(
+def given_generate_live_dataset_for_layer(
     layer_name: str,
     backend_client,
     scenario_state,
@@ -166,15 +173,15 @@ def given_generate_unseen_dataset_for_layer(
 ):
     if not scenario_state.uploaded_documents and not scenario_state.session_id:
         raise AssertionError(
-            "No uploaded document path or UI session available. Upload documents before generating unseen dataset."
+            "No uploaded document path or UI session available. Upload documents before generating live dataset."
         )
 
     normalized_layer = layer_name.strip().lower()
     if normalized_layer not in {"layer1", "layer2"}:
         raise AssertionError(f"Unsupported layer '{layer_name}'. Use 'layer1' or 'layer2'.")
 
-    question_count = _unseen_questions_per_layer()
-    output_path = framework_root / "data" / "generated" / f"{normalized_layer}_unseen_questions.json"
+    question_count = _live_questions_per_layer()
+    output_path = framework_root / "data" / "generated" / f"{normalized_layer}_live_questions.json"
 
     if scenario_state.uploaded_documents:
         document_path = Path(scenario_state.uploaded_documents[-1]).resolve()
@@ -186,7 +193,7 @@ def given_generate_unseen_dataset_for_layer(
         )
         source_reference = str(document_path)
     else:
-        chunk_limit = _unseen_context_chunk_limit()
+        chunk_limit = _live_context_chunk_limit()
         chunks = backend_client.get_session_chunks(limit=chunk_limit)
         contexts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
         if not contexts:
@@ -219,8 +226,8 @@ def given_generate_unseen_dataset_for_layer(
         for index, row in enumerate(rows[:question_count], start=1)
     ]
 
-    attach_text("unseen_dataset_path", str(output_path))
-    attach_json("unseen_dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
+    attach_text("live_dataset_path", str(output_path))
+    attach_json("live_dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
 
 
 @given(parsers.parse('I load dataset "{dataset_ref}"'))

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "GEN_1",
+    "question": "Describe Rabada\u2019s delivery to Rinku Singh, including shot type, placement, and resulting runs.",
+    "expected_answer": "Rabada bowled to Rinku Singh, who advanced down the track, created room, and smashed the ball over wide long-off for a six. The shot was played on the up, trusting the bounce, resulting in a maximum.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_2",
+    "question": "Detail how Suryakumar Yadav was caught by Linde off a slower wide off-spinner\u2019s thick top-edge.",
+    "expected_answer": "Suryakumar Yadav was caught by Linde after attempting to shovel a slower wide off-spinner behind square on the on-side. He got a thick top-edge, resulting in a simple catch for Linde at deep backward square.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "additional_metadata": {}
+  }
+]

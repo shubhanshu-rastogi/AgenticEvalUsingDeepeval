@@ -42,11 +42,11 @@ Feature: Layer 2 answer quality evaluation
     And metric "completeness" should be >= configured threshold
     And save results for reporting
 
-  @unseen @answer_relevancy @faithfulness @completeness
-  Scenario: Evaluate layer2 answer metrics on runtime unseen dataset
+  @live @answer_relevancy @faithfulness @completeness
+  Scenario: Evaluate layer2 answer metrics on runtime live dataset
     Given backend is reachable
     And I use latest uploaded session from application UI
-    And I generate unseen dataset for layer "layer2" from uploaded documents
+    And I generate live dataset for layer "layer2" from uploaded documents
     When I evaluate all questions
     Then metric "answer_relevancy" should be >= configured threshold
     And metric "faithfulness" should be >= configured threshold

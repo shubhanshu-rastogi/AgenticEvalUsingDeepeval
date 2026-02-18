@@ -28,7 +28,7 @@ synthesize:
 
 evaluation:
   cost_optimized: true
-  include_reason: false
+  include_reason: true
   max_retrieval_context_chunks: 2
   max_retrieval_context_chars_per_chunk: 700
   faithfulness_truths_extraction_limit: 6
@@ -37,7 +37,7 @@ evaluation:
   cache_ask_responses: true
   notebook_parity_mode: false
   fresh_session_per_question: false
-  disable_context_trimming: false
+  disable_context_trimming: true
   metric_question_mapping_mode: "all"
 
 model: "gpt-4.1-mini"

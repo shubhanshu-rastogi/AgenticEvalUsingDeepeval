@@ -77,8 +77,8 @@ def _normalize_metric(name: str) -> str:
 
 def _infer_data_source(scenario_name: str) -> str:
     lowered = scenario_name.lower()
-    if "unseen" in lowered:
-        return "Unseen Data"
+    if "live" in lowered or "unseen" in lowered:
+        return "Live Data"
     if "inline" in lowered:
         return "Inline Data"
     if "external" in lowered:
@@ -116,6 +116,7 @@ def _collect_rows(run_results: Iterable[RunResult]) -> list[dict]:
                         "question": question.question,
                         "expected_output": question.expected_answer or "",
                         "actual_output": question.actual_answer,
+                        "retrieval_context": [str(chunk) for chunk in question.retrieval_context],
                         "status": status,
                         "reason": reason,
                         "scenario": run.scenario,
@@ -151,14 +152,14 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
 
     inline_rows = by_type.get("Inline Data", [])
     external_rows = by_type.get("External Data", [])
-    unseen_rows = by_type.get("Unseen Data", [])
+    live_rows = by_type.get("Live Data", [])
     inline_rate = (sum(1 for r in inline_rows if r["status"] == "PASS") / len(inline_rows) * 100.0) if inline_rows else 0.0
     external_rate = (
         sum(1 for r in external_rows if r["status"] == "PASS") / len(external_rows) * 100.0
     ) if external_rows else 0.0
-    unseen_rate = (
-        sum(1 for r in unseen_rows if r["status"] == "PASS") / len(unseen_rows) * 100.0
-    ) if unseen_rows else 0.0
+    live_rate = (
+        sum(1 for r in live_rows if r["status"] == "PASS") / len(live_rows) * 100.0
+    ) if live_rows else 0.0
 
     failed_reasons = [
         row["reason"].strip()
@@ -178,7 +179,7 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
         "overall_pass_rate": f"{overall_pass_rate:.2f}%",
         "inline_rate": f"{inline_rate:.2f}%",
         "external_rate": f"{external_rate:.2f}%",
-        "unseen_rate": f"{unseen_rate:.2f}%",
+        "live_rate": f"{live_rate:.2f}%",
         "top_reasons": top_reasons,
     }
 
@@ -286,6 +287,7 @@ def write_executive_html(
                 "question": row["question"],
                 "expected_output": row["expected_output"],
                 "actual_output": row["actual_output"],
+                "retrieval_context": row["retrieval_context"],
                 "result": row["status"],
                 "reason_for_score": row["reason"],
                 "scenario": row["scenario"],
@@ -297,6 +299,11 @@ def write_executive_html(
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_json_path.write_text(json.dumps(logs_payload, indent=2))
+    context_payload = {
+        row["row_id"]: row["retrieval_context"]
+        for row in rows
+    }
+    context_payload_json = json.dumps(context_payload).replace("</", "<\\/")
 
     table_rows = []
     run_log_panels = []
@@ -313,6 +320,17 @@ def write_executive_html(
     for row in rows:
         status_class = _badge_class(row["status"])
         reason = row["reason"] or "N/A"
+        context_chunks = row["retrieval_context"]
+        context_count = len(context_chunks)
+        context_preview_text = _truncate(" ".join(context_chunks), 140) if context_chunks else "No retrieval context captured."
+        context_cell = (
+            f"<button type='button' class='context-link' data-row-id='{html.escape(row['row_id'])}' "
+            f"data-metric='{html.escape(row['metric_label'])}' "
+            f"data-question='{html.escape(row['question'])}' "
+            f"data-run='{html.escape(row['run_id'])}'>"
+            f"{context_count} chunk{'s' if context_count != 1 else ''} · View</button>"
+            f"<div class='context-preview' title='{html.escape(context_preview_text)}'>{html.escape(context_preview_text)}</div>"
+        ) if context_chunks else "<span class='context-empty'>N/A</span>"
         table_rows.append(
             "<tr "
             f"data-metric='{html.escape(row['metric_label'])}' "
@@ -327,6 +345,7 @@ def write_executive_html(
             f"<td title='{html.escape(row['question'])}'>{html.escape(_truncate(row['question'], 90))}</td>"
             f"<td title='{html.escape(row['expected_output'])}'>{html.escape(_truncate(row['expected_output'], 90))}</td>"
             f"<td title='{html.escape(row['actual_output'])}'>{html.escape(_truncate(row['actual_output'], 90))}</td>"
+            f"<td>{context_cell}</td>"
             f"<td>{_format_score(row['score'])}</td>"
             f"<td><span class='badge {status_class}'>{html.escape(row['status'])}</span></td>"
             f"<td title='{html.escape(reason)}'>{html.escape(_truncate(reason, 95))}</td>"
@@ -513,7 +532,7 @@ def write_executive_html(
       max-height: 62vh;
     }}
     .table-wrap table {{
-      min-width: 1320px;
+      min-width: 1500px;
     }}
     .badge {{
       border-radius: 999px;
@@ -578,6 +597,130 @@ def write_executive_html(
     }}
     .tech-link:hover {{
       text-decoration: underline;
+    }}
+    .context-link {{
+      border: 1px solid #bfd4f6;
+      background: #edf4ff;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }}
+    .context-link:hover {{
+      background: #e3eeff;
+      border-color: #9fc0ee;
+    }}
+    .context-preview {{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      max-width: 260px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }}
+    .context-empty {{
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+    }}
+    .context-modal[hidden] {{
+      display: none;
+    }}
+    .context-modal {{
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.52);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      backdrop-filter: blur(2px);
+    }}
+    .context-modal-card {{
+      width: min(980px, 96vw);
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
+      overflow: hidden;
+    }}
+    .context-modal-header {{
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff, var(--surface-soft));
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }}
+    .context-modal-title {{
+      margin: 0;
+      font-size: 16px;
+    }}
+    .context-modal-meta {{
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }}
+    .context-modal-close {{
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }}
+    .context-modal-close:hover {{
+      background: #f8fbff;
+    }}
+    .context-modal-body {{
+      padding: 14px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      background: #fbfdff;
+    }}
+    .context-modal-empty {{
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }}
+    .context-chunk {{
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+    }}
+    .context-chunk-label {{
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      letter-spacing: 0.35px;
+      text-transform: uppercase;
+    }}
+    .context-chunk-text {{
+      margin: 6px 0 0 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #1f2937;
+      white-space: pre-wrap;
+      word-break: break-word;
     }}
     .technical {{
       margin-top: 22px;
@@ -695,7 +838,7 @@ def write_executive_html(
       <article class="summary-card"><span class="label">Pass / Fail / N/A</span><span class="value">{summary["pass_count"]} / {summary["fail_count"]} / {summary["na_count"]}</span></article>
       <article class="summary-card"><span class="label">Inline Data Pass Rate</span><span class="value">{summary["inline_rate"]}</span></article>
       <article class="summary-card"><span class="label">External Data Pass Rate</span><span class="value">{summary["external_rate"]}</span></article>
-      <article class="summary-card"><span class="label">Unseen Data Pass Rate</span><span class="value">{summary["unseen_rate"]}</span></article>
+      <article class="summary-card"><span class="label">Live Data Pass Rate</span><span class="value">{summary["live_rate"]}</span></article>
       <article class="summary-card"><span class="label">Top Failure Reasons</span><span class="value" style="font-size: 14px;">{html.escape(summary["top_reasons"])}</span></article>
     </section>
 
@@ -761,6 +904,7 @@ def write_executive_html(
               <th>Question</th>
               <th>Expected Output</th>
               <th>Actual Output</th>
+              <th>Retrieved Context</th>
               <th>Score</th>
               <th>Result</th>
               <th>Reason For Score</th>
@@ -795,6 +939,19 @@ def write_executive_html(
       </div>
     </div>
   </div>
+  <div class="context-modal" id="contextModal" hidden>
+    <div class="context-modal-card" role="dialog" aria-modal="true" aria-labelledby="contextModalTitle">
+      <div class="context-modal-header">
+        <div>
+          <h3 class="context-modal-title" id="contextModalTitle">Retrieved Context</h3>
+          <div class="context-modal-meta" id="contextModalMeta"></div>
+        </div>
+        <button type="button" class="context-modal-close" id="contextModalClose">Close</button>
+      </div>
+      <div class="context-modal-body" id="contextModalBody"></div>
+    </div>
+  </div>
+  <script type="application/json" id="contextPayload">{context_payload_json}</script>
   <script>
     (function () {{
       const searchInput = document.getElementById("searchInput");
@@ -806,6 +963,13 @@ def write_executive_html(
       const techDetails = document.getElementById("technical-logs");
       const jumpToLogs = document.getElementById("jumpToLogs");
       const inlineTechLinks = Array.from(document.querySelectorAll(".tech-link"));
+      const contextLinks = Array.from(document.querySelectorAll(".context-link"));
+      const contextModal = document.getElementById("contextModal");
+      const contextModalBody = document.getElementById("contextModalBody");
+      const contextModalMeta = document.getElementById("contextModalMeta");
+      const contextModalClose = document.getElementById("contextModalClose");
+      const contextPayloadNode = document.getElementById("contextPayload");
+      const contextPayload = contextPayloadNode ? JSON.parse(contextPayloadNode.textContent || "{{}}") : {{}};
 
       function normalize(text) {{
         return (text || "").toLowerCase();
@@ -844,6 +1008,83 @@ def write_executive_html(
         link.addEventListener("click", () => {{
           techDetails.open = true;
         }});
+      }});
+
+      function closeContextModal() {{
+        contextModal.setAttribute("hidden", "hidden");
+        contextModalBody.innerHTML = "";
+        contextModalMeta.textContent = "";
+        document.body.style.overflow = "";
+      }}
+
+      function openContextModal(link) {{
+        const rowId = link.dataset.rowId || "";
+        const chunks = Array.isArray(contextPayload[rowId]) ? contextPayload[rowId] : [];
+        const metric = link.dataset.metric || "Metric";
+        const runId = link.dataset.run || "Run";
+        const question = link.dataset.question || "";
+
+        contextModalMeta.textContent = `${{metric}} · ${{runId}} · ${{chunks.length}} chunk${{chunks.length === 1 ? "" : "s"}}`;
+        contextModalBody.innerHTML = "";
+
+        if (question) {{
+          const questionCard = document.createElement("article");
+          questionCard.className = "context-chunk";
+
+          const questionLabel = document.createElement("p");
+          questionLabel.className = "context-chunk-label";
+          questionLabel.textContent = "Question";
+          questionCard.appendChild(questionLabel);
+
+          const questionText = document.createElement("p");
+          questionText.className = "context-chunk-text";
+          questionText.textContent = question;
+          questionCard.appendChild(questionText);
+
+          contextModalBody.appendChild(questionCard);
+        }}
+
+        if (!chunks.length) {{
+          const empty = document.createElement("p");
+          empty.className = "context-modal-empty";
+          empty.textContent = "No retrieval context captured for this row.";
+          contextModalBody.appendChild(empty);
+        }} else {{
+          chunks.forEach((chunk, idx) => {{
+            const card = document.createElement("article");
+            card.className = "context-chunk";
+
+            const label = document.createElement("p");
+            label.className = "context-chunk-label";
+            label.textContent = `Chunk ${{idx + 1}}`;
+            card.appendChild(label);
+
+            const body = document.createElement("p");
+            body.className = "context-chunk-text";
+            body.textContent = chunk || "";
+            card.appendChild(body);
+
+            contextModalBody.appendChild(card);
+          }});
+        }}
+
+        contextModal.removeAttribute("hidden");
+        document.body.style.overflow = "hidden";
+      }}
+
+      contextLinks.forEach((link) => {{
+        link.addEventListener("click", () => openContextModal(link));
+      }});
+      contextModalClose.addEventListener("click", closeContextModal);
+      contextModal.addEventListener("click", (event) => {{
+        if (event.target === contextModal) {{
+          closeContextModal();
+        }}
+      }});
+      document.addEventListener("keydown", (event) => {{
+        if (event.key === "Escape" && !contextModal.hasAttribute("hidden")) {{
+          closeContextModal();
+        }}
       }});
     }})();
   </script>

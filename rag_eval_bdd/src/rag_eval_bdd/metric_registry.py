@@ -113,7 +113,7 @@ def build_metric(metric_name: str, config: AppConfig):
                 evaluation_steps=[
                     "Review the user question and the retrieval context.",
                     "Decide whether the retrieval context is relevant to answering the question.",
-                    "Assign a score from 0 to 1 where 1 means highly relevant and 0 means irrelevant.",
+                    "Assign an integer score from 0 to 10 where 10 means highly relevant and 0 means irrelevant.",
                     "Provide a short reason for the score.",
                 ],
                 evaluation_params=[
@@ -134,7 +134,7 @@ def build_metric(metric_name: str, config: AppConfig):
             evaluation_steps=[
                 "Review the user question and the retrieval context.",
                 "Decide whether the retrieval context is relevant to answering the question.",
-                "Assign a score from 0 to 1 where 1 means highly relevant and 0 means irrelevant.",
+                "Assign an integer score from 0 to 10 where 10 means highly relevant and 0 means irrelevant.",
                 "Provide a short reason for the score.",
             ],
             evaluation_params=[
@@ -168,7 +168,7 @@ def build_metric(metric_name: str, config: AppConfig):
             evaluation_steps=[
                 "Check whether the response answers all parts of the user question.",
                 "Check whether important specifics asked in the question are present.",
-                "Give a score from 0 to 1 where 1 means fully complete.",
+                "Give an integer score from 0 to 10 where 10 means fully complete and 0 means incomplete.",
                 "Provide a short reason for the score.",
             ],
             evaluation_params=[
