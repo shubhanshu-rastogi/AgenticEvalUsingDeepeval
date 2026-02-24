@@ -5,7 +5,7 @@ from datetime import datetime
 import html
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List
 
 from rag_eval_bdd.models import RunResult, TrendSummary
 
@@ -184,10 +184,10 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
     }
 
 
-def _metric_latest_status_counts(rows: list[dict]) -> Dict[Tuple[str, str], Dict[str, int]]:
-    counts: Dict[Tuple[str, str], Dict[str, int]] = {}
+def _metric_status_counts(rows: list[dict]) -> Dict[str, Dict[str, int]]:
+    counts: Dict[str, Dict[str, int]] = {}
     for row in rows:
-        key = (row["run_id"], row["metric"])
+        key = row["metric"]
         if key not in counts:
             counts[key] = {"PASS": 0, "FAIL": 0, "N/A": 0}
         status = row["status"] if row["status"] in {"PASS", "FAIL", "N/A"} else "N/A"
@@ -213,13 +213,13 @@ def _metric_health_rows(
     pass_rate_rule: str,
     min_pass_rate: float,
 ) -> str:
-    latest_counts = _metric_latest_status_counts(eval_rows)
+    metric_counts = _metric_status_counts(eval_rows)
     metric_rows: list[str] = []
     for metric in sorted(trend_summary.metrics, key=lambda metric: metric.metric_name):
         if not metric.points:
             continue
         latest = metric.points[-1]
-        count_bucket = latest_counts.get((latest.run_id, metric.metric_name), {"PASS": 0, "FAIL": 0, "N/A": 0})
+        count_bucket = metric_counts.get(metric.metric_name, {"PASS": 0, "FAIL": 0, "N/A": 0})
         status = _status(
             latest.avg_score,
             latest.threshold,

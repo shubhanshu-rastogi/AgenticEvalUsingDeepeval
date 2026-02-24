@@ -7,6 +7,8 @@ from typing import Dict, List, Tuple
 
 from rag_eval_bdd.models import MetricTrend, RunIndexEntry, RunResult, TrendPoint, TrendSummary
 
+TREND_RAW_HISTORY_MULTIPLIER = 8
+
 
 class ResultsStore:
     def __init__(self, base_dir: Path, keep_last_n: int = 5):
@@ -28,7 +30,9 @@ class ResultsStore:
         results_file = run_dir / "results.json"
         results_file.write_text(run_result.model_dump_json(indent=2))
 
-        entries = self._load_index_entries()
+        entries = self._rebuild_index_entries(limit=self._trend_history_limit())
+
+        current_entries = self._load_current_entries()
         new_entry = RunIndexEntry(
             run_id=run_result.run_id,
             timestamp=run_result.timestamp,
@@ -36,13 +40,9 @@ class ResultsStore:
             feature=run_result.feature,
             scenario=run_result.scenario,
         )
-
-        entries.insert(0, new_entry)
-        entries = entries[: self.keep_last_n]
-        self._write_index_entries(entries)
-
-        current_entries = self._load_current_entries()
-        current_entries.insert(0, new_entry)
+        deduped = [entry for entry in current_entries if entry.run_id != new_entry.run_id]
+        deduped.insert(0, new_entry)
+        current_entries = deduped
         self._write_current_entries(current_entries)
 
         trend_summary = self._build_trends(entries)
@@ -53,7 +53,7 @@ class ResultsStore:
 
     def load_recent_run_results(self) -> List[RunResult]:
         run_results: List[RunResult] = []
-        entries = self._load_index_entries()
+        entries = self._load_index_entries()[: self.keep_last_n]
         for entry in entries:
             run_file = self.base_dir / entry.path
             if not run_file.exists():
@@ -77,7 +77,7 @@ class ResultsStore:
         self._write_current_entries([])
 
     def refresh_trends(self) -> TrendSummary:
-        entries = self._load_index_entries()
+        entries = self._rebuild_index_entries(limit=self._trend_history_limit())
         trend_summary = self._build_trends(entries)
         trend_file = self.trends_dir / "last5.json"
         trend_file.write_text(trend_summary.model_dump_json(indent=2))
@@ -136,3 +136,36 @@ class ResultsStore:
             keep_last_n=self.keep_last_n,
             metrics=trends,
         )
+
+    def _trend_history_limit(self) -> int:
+        return max(self.keep_last_n, self.keep_last_n * TREND_RAW_HISTORY_MULTIPLIER)
+
+    def _rebuild_index_entries(self, limit: int) -> List[RunIndexEntry]:
+        entries: List[RunIndexEntry] = []
+        for run_dir in self.runs_dir.iterdir():
+            if not run_dir.is_dir():
+                continue
+            run_file = run_dir / "results.json"
+            if not run_file.exists():
+                continue
+            try:
+                run_payload = json.loads(run_file.read_text())
+                run_result = RunResult.model_validate(run_payload)
+            except Exception:  # noqa: BLE001
+                continue
+
+            entries.append(
+                RunIndexEntry(
+                    run_id=run_result.run_id,
+                    timestamp=run_result.timestamp,
+                    path=str(run_file.relative_to(self.base_dir)),
+                    feature=run_result.feature,
+                    scenario=run_result.scenario,
+                )
+            )
+
+        entries.sort(key=lambda entry: entry.timestamp, reverse=True)
+        if limit > 0:
+            entries = entries[:limit]
+        self._write_index_entries(entries)
+        return entries

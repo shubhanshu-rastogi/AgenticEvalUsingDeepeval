@@ -7,6 +7,8 @@ from typing import Any, Iterable, List
 
 from rag_eval_bdd.models import RunResult, TrendSummary
 
+RUN_CLUSTER_MAX_GAP_MINUTES = 5
+
 def attach_json(name: str, payload: Any) -> None:
     del name, payload
     return
@@ -262,21 +264,101 @@ def _derive_shared_threshold(trend_summary: TrendSummary) -> float:
     return float(ranked[0][0])
 
 
-def _build_combined_trend_card(
+def _parse_timestamp(timestamp: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_timeline_clusters(
     trend_summary: TrendSummary,
-    pass_rate_rule: str,
-    min_pass_rate: float,
-) -> str:
+    max_gap_minutes: int = RUN_CLUSTER_MAX_GAP_MINUTES,
+) -> list[list[tuple[str, str]]]:
     timeline_entries: dict[tuple[str, str], str] = {}
     for metric in trend_summary.metrics:
         for point in metric.points:
             timeline_entries[(point.run_id, point.timestamp)] = point.timestamp
 
     ordered_timeline = sorted(timeline_entries.keys(), key=lambda key: key[1])
-    if trend_summary.keep_last_n > 0:
-        ordered_timeline = ordered_timeline[-trend_summary.keep_last_n :]
-
     if not ordered_timeline:
+        return []
+
+    clusters: list[list[tuple[str, str]]] = []
+    cluster_start_dt: list[datetime | None] = []
+    max_gap_seconds = max_gap_minutes * 60
+
+    for timeline_key in ordered_timeline:
+        _, timestamp = timeline_key
+        current_dt = _parse_timestamp(timestamp)
+
+        if not clusters:
+            clusters.append([timeline_key])
+            cluster_start_dt.append(current_dt)
+            continue
+
+        start_dt = cluster_start_dt[-1]
+        same_cluster = False
+        if current_dt is not None and start_dt is not None:
+            delta_seconds = (current_dt - start_dt).total_seconds()
+            same_cluster = 0 <= delta_seconds <= max_gap_seconds
+
+        if same_cluster:
+            clusters[-1].append(timeline_key)
+        else:
+            clusters.append([timeline_key])
+            cluster_start_dt.append(current_dt)
+
+    if trend_summary.keep_last_n > 0:
+        clusters = clusters[-trend_summary.keep_last_n :]
+
+    return clusters
+
+
+def _point_map_for_clusters(
+    points: list[Any],
+    timeline_clusters: list[list[tuple[str, str]]],
+) -> dict[int, Any]:
+    point_lookup = {(point.run_id, point.timestamp): point for point in points}
+    point_map: dict[int, Any] = {}
+
+    for cluster_idx, cluster in enumerate(timeline_clusters):
+        selected = None
+        selected_dt = None
+        for timeline_key in cluster:
+            point = point_lookup.get(timeline_key)
+            if point is None:
+                continue
+            point_dt = _parse_timestamp(point.timestamp)
+            if selected is None:
+                selected = point
+                selected_dt = point_dt
+                continue
+            if selected_dt is None or (point_dt is not None and point_dt >= selected_dt):
+                selected = point
+                selected_dt = point_dt
+
+        if selected is not None:
+            point_map[cluster_idx] = selected
+
+    return point_map
+
+
+def _points_for_clusters(
+    points: list[Any],
+    timeline_clusters: list[list[tuple[str, str]]],
+) -> list[Any]:
+    point_map = _point_map_for_clusters(points, timeline_clusters)
+    return [point_map[idx] for idx in range(len(timeline_clusters)) if idx in point_map]
+
+
+def _build_combined_trend_card(
+    trend_summary: TrendSummary,
+    pass_rate_rule: str,
+    min_pass_rate: float,
+    timeline_clusters: list[list[tuple[str, str]]],
+) -> str:
+    if not timeline_clusters:
         return ""
 
     width, height = 1080, 300
@@ -285,9 +367,9 @@ def _build_combined_trend_card(
     plot_h = height - top - bottom
 
     def x_pos(i: int) -> float:
-        if len(ordered_timeline) == 1:
+        if len(timeline_clusters) == 1:
             return left + (plot_w / 2.0)
-        return left + (plot_w * i / (len(ordered_timeline) - 1))
+        return left + (plot_w * i / (len(timeline_clusters) - 1))
 
     def y_pos(v: float) -> float:
         return top + (1.0 - v) * plot_h
@@ -301,7 +383,8 @@ def _build_combined_trend_card(
         grid_lines.append(f"<text x='10' y='{y + 4:.2f}' class='axis-label'>{tick:.2f}</text>")
 
     x_labels = []
-    for idx, (_, timestamp) in enumerate(ordered_timeline):
+    for idx, cluster in enumerate(timeline_clusters):
+        _, timestamp = cluster[-1]
         x = x_pos(idx)
         x_labels.append(
             f"<text x='{x:.2f}' y='{height - 14}' text-anchor='middle' class='axis-label'>"
@@ -334,11 +417,11 @@ def _build_combined_trend_card(
 
     for idx, metric in enumerate(sorted(trend_summary.metrics, key=lambda item: item.metric_name)):
         color = palette[idx % len(palette)]
-        point_lookup = {(point.run_id, point.timestamp): point for point in metric.points}
+        point_map = _point_map_for_clusters(metric.points, timeline_clusters)
         coordinates: list[tuple[float, float]] = []
         points_for_status = []
-        for run_idx, timeline_key in enumerate(ordered_timeline):
-            point = point_lookup.get(timeline_key)
+        for run_idx in range(len(timeline_clusters)):
+            point = point_map.get(run_idx)
             if point is None or point.avg_score is None:
                 continue
             x = x_pos(run_idx)
@@ -391,7 +474,7 @@ def _build_combined_trend_card(
     return f"""
     <section class="metric-card combined-card">
       <div class="metric-header">
-        <h3>All Metrics (Last {len(ordered_timeline)} Runs)</h3>
+        <h3>All Metrics (Last {len(timeline_clusters)} Runs)</h3>
         <span class="status-pill status-na">Shared Threshold: {shared_threshold:.2f}</span>
       </div>
       <div class="combined-legend">
@@ -414,14 +497,20 @@ def write_trend_html(
     pass_rate_rule: str = "min_pass_rate",
     min_pass_rate: float = 100.0,
 ) -> Path:
+    # Trend dashboard status is intentionally threshold-only.
+    # Executive report continues to apply pass-rate rules independently.
+    trend_status_rule = "none"
+
+    timeline_clusters = _build_timeline_clusters(trend_summary)
     combined_trend_card = _build_combined_trend_card(
         trend_summary=trend_summary,
-        pass_rate_rule=pass_rate_rule,
+        pass_rate_rule=trend_status_rule,
         min_pass_rate=min_pass_rate,
+        timeline_clusters=timeline_clusters,
     )
     metric_cards: List[str] = []
     for metric in trend_summary.metrics:
-        points = metric.points
+        points = _points_for_clusters(metric.points, timeline_clusters)
         if not points:
             continue
 
@@ -434,7 +523,7 @@ def write_trend_html(
             latest_score,
             latest_threshold,
             pass_rate=latest_pass_rate,
-            pass_rate_rule=pass_rate_rule,
+            pass_rate_rule=trend_status_rule,
             min_pass_rate=min_pass_rate,
         )
 
@@ -460,7 +549,7 @@ def write_trend_html(
                 score,
                 threshold,
                 pass_rate=point.pass_rate,
-                pass_rate_rule=pass_rate_rule,
+                pass_rate_rule=trend_status_rule,
                 min_pass_rate=min_pass_rate,
             )
             score_text = "N/A" if score is None else f"{score:.4f}"
@@ -497,7 +586,7 @@ def write_trend_html(
                 <div class="kpi"><span class="label">Consistency (1 SD)</span><span class="value {consistency_class}">{consistency}</span></div>
               </div>
               <div class="chart-wrap">
-                {_build_metric_svg(metric.metric_name, points, pass_rate_rule, min_pass_rate)}
+                {_build_metric_svg(metric.metric_name, points, trend_status_rule, min_pass_rate)}
               </div>
               <table class="runs-table">
                 <thead>

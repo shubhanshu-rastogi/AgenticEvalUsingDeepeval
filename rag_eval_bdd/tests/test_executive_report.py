@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -93,3 +94,108 @@ def test_write_executive_html_contains_business_table_and_technical_logs(tmp_pat
     assert "../trends/last5.html" in html
     assert "Download Full Technical Logs (JSON)" in html
     assert (tmp_path / "reports" / "technical_logs.json").exists()
+
+
+def test_metric_health_counts_aggregate_across_loaded_runs(tmp_path: Path):
+    run_1 = RunResult(
+        run_id="RUN_001",
+        timestamp="2026-02-12T10:00:00+00:00",
+        feature="feature_file.feature",
+        scenario="test_evaluate_layer1_contextual_metrics_from_inline_dataset_table",
+        tags=["layer1", "live"],
+        selected_metrics=["contextual_precision"],
+        dataset_size=1,
+        question_results=[
+            QuestionEvalResult(
+                question_id="Q1",
+                question="Question 1",
+                expected_answer="Expected 1",
+                actual_answer="Actual 1",
+                retrieval_context=["chunk 1"],
+                metrics=[
+                    MetricResult(
+                        metric_name="contextual_precision",
+                        threshold=0.6,
+                        score=0.9,
+                        passed=True,
+                        reason="Reason 1",
+                    )
+                ],
+                raw_request={},
+                raw_response={},
+            )
+        ],
+        metric_aggregates=[],
+    )
+    run_2 = RunResult(
+        run_id="RUN_002",
+        timestamp="2026-02-12T10:10:00+00:00",
+        feature="feature_file.feature",
+        scenario="test_evaluate_layer1_contextual_metrics_from_external_dataset_file",
+        tags=["layer1", "live"],
+        selected_metrics=["contextual_precision"],
+        dataset_size=1,
+        question_results=[
+            QuestionEvalResult(
+                question_id="Q2",
+                question="Question 2",
+                expected_answer="Expected 2",
+                actual_answer="Actual 2",
+                retrieval_context=["chunk 2"],
+                metrics=[
+                    MetricResult(
+                        metric_name="contextual_precision",
+                        threshold=0.6,
+                        score=0.8,
+                        passed=True,
+                        reason="Reason 2",
+                    )
+                ],
+                raw_request={},
+                raw_response={},
+            )
+        ],
+        metric_aggregates=[],
+    )
+    trend_summary = TrendSummary(
+        generated_at="2026-02-12T10:15:00+00:00",
+        keep_last_n=5,
+        metrics=[
+            MetricTrend(
+                metric_name="contextual_precision",
+                points=[
+                    TrendPoint(
+                        run_id="RUN_001",
+                        timestamp="2026-02-12T10:00:00+00:00",
+                        avg_score=0.9,
+                        pass_rate=100.0,
+                        threshold=0.6,
+                    ),
+                    TrendPoint(
+                        run_id="RUN_002",
+                        timestamp="2026-02-12T10:10:00+00:00",
+                        avg_score=0.8,
+                        pass_rate=100.0,
+                        threshold=0.6,
+                    ),
+                ],
+            )
+        ],
+    )
+
+    output = write_executive_html(
+        run_results=[run_1, run_2],
+        trend_summary=trend_summary,
+        output_path=tmp_path / "reports" / "index.html",
+    )
+    html = output.read_text()
+    metric_row_match = re.search(
+        r"<tr><td>Contextual Precision</td>.*?<div class='status-counts'>.*?</div></td><td><span class='badge",
+        html,
+        flags=re.DOTALL,
+    )
+    assert metric_row_match is not None
+    metric_row = metric_row_match.group(0)
+    assert "<span class='count-pill count-pass'>2</span>" in metric_row
+    assert "<span class='count-pill count-fail'>0</span>" in metric_row
+    assert "<span class='count-pill count-na'>0</span>" in metric_row

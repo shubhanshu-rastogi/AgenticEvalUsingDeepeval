@@ -50,7 +50,7 @@ def test_write_trend_html_contains_colored_dashboard(tmp_path: Path):
     assert "Consistency (1 SD)" in html
 
 
-def test_write_trend_html_marks_fail_when_pass_rate_rule_not_met(tmp_path: Path):
+def test_write_trend_html_uses_threshold_only_status_even_when_pass_rate_rule_not_met(tmp_path: Path):
     summary = TrendSummary(
         generated_at="2026-02-09T16:00:00+00:00",
         keep_last_n=5,
@@ -78,5 +78,92 @@ def test_write_trend_html_marks_fail_when_pass_rate_rule_not_met(tmp_path: Path)
     )
     html = output.read_text()
 
-    assert '<span class="status-pill status-fail">FAIL</span>' in html
+    assert '<span class="status-pill status-pass">PASS</span>' in html
     assert "66.70%" in html
+
+
+def test_write_trend_html_collapses_close_runs_into_single_plot_point(tmp_path: Path):
+    summary = TrendSummary(
+        generated_at="2026-02-24T16:40:00+00:00",
+        keep_last_n=5,
+        metrics=[
+            MetricTrend(
+                metric_name="answer_relevancy",
+                points=[
+                    TrendPoint(
+                        run_id="20260224T162500Z_aaaa1111",
+                        timestamp="2026-02-24T16:25:00+00:00",
+                        avg_score=0.90,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                    TrendPoint(
+                        run_id="20260224T162700Z_bbbb2222",
+                        timestamp="2026-02-24T16:27:00+00:00",
+                        avg_score=0.95,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                    TrendPoint(
+                        run_id="20260224T180000Z_cccc3333",
+                        timestamp="2026-02-24T18:00:00+00:00",
+                        avg_score=1.00,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                ],
+            )
+        ],
+    )
+
+    output = write_trend_html(summary, tmp_path / "last5.html")
+    html = output.read_text()
+
+    # The first two points are within the session-cluster window and should collapse to one run.
+    assert "All Metrics (Last 2 Runs)" in html
+    assert "20260224T162500Z_aaaa1111" not in html
+    assert "20260224T162700Z_bbbb2222" in html
+    assert "20260224T180000Z_cccc3333" in html
+
+
+def test_write_trend_html_does_not_chain_clusters_transitively(tmp_path: Path):
+    summary = TrendSummary(
+        generated_at="2026-02-24T16:40:00+00:00",
+        keep_last_n=5,
+        metrics=[
+            MetricTrend(
+                metric_name="answer_relevancy",
+                points=[
+                    TrendPoint(
+                        run_id="20260224T160000Z_aaaa1111",
+                        timestamp="2026-02-24T16:00:00+00:00",
+                        avg_score=0.90,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                    TrendPoint(
+                        run_id="20260224T160400Z_bbbb2222",
+                        timestamp="2026-02-24T16:04:00+00:00",
+                        avg_score=0.95,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                    TrendPoint(
+                        run_id="20260224T160800Z_cccc3333",
+                        timestamp="2026-02-24T16:08:00+00:00",
+                        avg_score=1.00,
+                        pass_rate=100.0,
+                        threshold=0.50,
+                    ),
+                ],
+            )
+        ],
+    )
+
+    output = write_trend_html(summary, tmp_path / "last5.html")
+    html = output.read_text()
+
+    # 16:00 and 16:04 are one cluster, 16:08 is outside the 5-minute cluster-start window.
+    assert "All Metrics (Last 2 Runs)" in html
+    assert "20260224T160400Z_bbbb2222" in html
+    assert "20260224T160800Z_cccc3333" in html
