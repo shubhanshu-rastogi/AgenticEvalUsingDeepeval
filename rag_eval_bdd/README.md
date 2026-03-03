@@ -37,7 +37,10 @@ Business-friendly and technical RAG evaluation framework built with `pytest-bdd`
 
 `results/trends/last5.html`
 
-- Shows last N runs trend (N from `config/config.yaml` -> `reporting.keep_last_n_runs`).
+- Shows last N timeline clusters (N from `config/config.yaml` -> `reporting.keep_last_n_runs`).
+- Cluster rule: runs close in time are grouped into one point using a fixed 5-minute window from cluster start.
+- For each cluster, the latest run in that cluster is plotted.
+- Trend status rule is threshold-only: if `avg_score >= threshold`, status is `PASS`.
 - Used for historical health comparison.
 
 ## Quick start
@@ -141,8 +144,8 @@ Important sections:
 - `thresholds`: metric pass criteria
 - `reporting`:
   - `keep_last_n_runs`
-  - `trend_status_pass_rate_rule`
-  - `trend_status_min_pass_rate`
+  - `trend_status_pass_rate_rule` (used by executive report status rule)
+  - `trend_status_min_pass_rate` (used by executive report status rule)
 - `evaluation`: performance/cost behavior
 
 ## Result storage
@@ -155,11 +158,41 @@ Important sections:
 - `results/trends/last5.json`: trend data
 - `results/trends/last5.html`: trend dashboard
 
+## Architecture (RADVALIDDD view)
+
+```mermaid
+flowchart LR
+    A["Pytest-BDD Run"] --> B["Evaluator (DeepEval Metrics)"]
+    B --> C["results/runs/<run_id>/results.json"]
+    C --> D["ResultsStore"]
+    D --> E["results/index.json (Historical Index)"]
+    D --> F["results/current_index.json (Current Session Index)"]
+
+    G["CLI: rag_eval_bdd report"] --> D
+    G --> H["Build Trend Summary"]
+    E --> H
+    H --> I["Timeline Clustering (5-minute window from cluster start)"]
+    I --> J["Select Latest Run per Cluster"]
+    J --> K["results/trends/last5.json"]
+    J --> L["results/trends/last5.html"]
+    L --> M["Trend Status: PASS when avg_score >= threshold"]
+
+    G --> N["Build Executive Report"]
+    F --> N
+    H --> N
+    N --> O["results/reports/index.html"]
+    N --> P["Executive Status uses pass-rate rule from config"]
+```
+
 ## Troubleshooting
 
 ### Why does trend include older runs?
 
 Because `last5.html` is historical by design (reads recent runs index).
+
+### Why does one timestamp show one point for multiple runs?
+
+Trend plotting clusters nearby runs in a fixed 5-minute window and shows only the latest run in each cluster.
 
 ### Why does `index.html` show only my latest session?
 

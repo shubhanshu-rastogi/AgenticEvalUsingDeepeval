@@ -9,7 +9,7 @@ This pipeline is designed for demo-app commit validation with a smoke gate and b
 - Build fails if smoke fails.
 - Reports are published in Jenkins UI:
   - Executive report (current run)
-  - Trend dashboard (last 5)
+  - Trend dashboard (last 5 run clusters)
 - Reports are emailed (if recipients are configured).
 
 ## Jenkinsfile
@@ -64,7 +64,7 @@ This is the correct way to guarantee merge gating; Jenkins build result becomes 
 ## Reports produced
 
 - `rag_eval_bdd/results/reports/index.html` (current run only)
-- `rag_eval_bdd/results/trends/last5.html` (historical last-5 trend)
+- `rag_eval_bdd/results/trends/last5.html` (historical last-5 run-cluster trend)
 - `rag_eval_bdd/results/reports/technical_logs.json`
 
 The pipeline also archives all `rag_eval_bdd/results/**` artifacts.

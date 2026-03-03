@@ -91,6 +91,9 @@ You can combine tags using `and`, `or`, `not`.
 
 - Historical dashboard using recent run history.
 - Run retention count comes from `config/config.yaml` (`reporting.keep_last_n_runs`).
+- Trend points are clustered by time (fixed 5-minute window from cluster start).
+- Only the latest run in each cluster is plotted.
+- Trend status is threshold-only (`avg_score >= threshold` means `PASS`).
 
 ## 6) How to validate results quickly
 
@@ -114,6 +117,10 @@ Use tag filters that match existing scenarios and run via `make run-tags` or `py
 
 - `index.html` is regenerated for current session.
 - `last5.html` is historical and intentionally includes previous runs.
+
+### Why does one trend point represent multiple close runs?
+
+The trend dashboard groups nearby runs into a single time cluster (5-minute window) and plots one point per cluster.
 
 ## 8) Key artifact paths
 
