@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 import html
 import json
+import re
 from pathlib import Path
 from typing import Dict, Iterable, List
 
@@ -139,6 +140,59 @@ def _format_threshold(threshold: float | None) -> str:
     return f"{threshold:.2f}"
 
 
+def _normalize_reason_for_grouping(reason: str) -> str:
+    text = reason.strip()
+    # Remove volatile IDs and collapse whitespace so similar errors group together.
+    text = re.sub(r"0x[0-9a-fA-F]+", "0x...", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def _is_transient_infra_reason(reason: str) -> bool:
+    lowered = reason.lower()
+    infra_markers = (
+        "retryerror",
+        "max retries exceeded",
+        "timeouterror",
+        "readtimeout",
+        "connecttimeout",
+        "apiconnectionerror",
+        "connection error",
+        "temporarily unavailable",
+        "service unavailable",
+        "http 429",
+        "rate limit",
+    )
+    return any(marker in lowered for marker in infra_markers)
+
+
+def _top_failure_reasons_text(rows: list[dict]) -> str:
+    failed_reasons = [
+        _normalize_reason_for_grouping(row["reason"])
+        for row in rows
+        if row["status"] == "FAIL" and row["reason"].strip()
+    ]
+    if not failed_reasons:
+        return "No failed reasons captured."
+
+    quality_counts: Counter[str] = Counter()
+    transient_count = 0
+    for reason in failed_reasons:
+        if _is_transient_infra_reason(reason):
+            transient_count += 1
+        else:
+            quality_counts[reason] += 1
+
+    summary_parts: list[str] = []
+    for reason, count in quality_counts.most_common(3):
+        summary_parts.append(f"{count}x {_truncate(reason, 90)}")
+
+    if transient_count > 0:
+        summary_parts.append(f"{transient_count}x Transient backend/API retry errors")
+
+    return "; ".join(summary_parts) if summary_parts else "No failed reasons captured."
+
+
 def _summary_cards(rows: list[dict]) -> dict[str, str]:
     total = len(rows)
     pass_count = sum(1 for row in rows if row["status"] == "PASS")
@@ -161,15 +215,7 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
         sum(1 for r in live_rows if r["status"] == "PASS") / len(live_rows) * 100.0
     ) if live_rows else 0.0
 
-    failed_reasons = [
-        row["reason"].strip()
-        for row in rows
-        if row["status"] == "FAIL" and row["reason"].strip()
-    ]
-    reason_counts = Counter(failed_reasons)
-    top_reasons = ", ".join(
-        _truncate(reason, 90) for reason, _ in reason_counts.most_common(3)
-    ) or "No failed reasons captured."
+    top_reasons = _top_failure_reasons_text(rows)
 
     return {
         "total_rows": str(total),
@@ -207,6 +253,20 @@ def _status_count_html(pass_count: int, fail_count: int, na_count: int) -> str:
     )
 
 
+def _metric_health_status_from_counts(
+    pass_count: int,
+    fail_count: int,
+    na_count: int,
+) -> str:
+    if fail_count > 0:
+        return "FAIL"
+    if pass_count > 0:
+        return "PASS"
+    if na_count > 0:
+        return "N/A"
+    return "N/A"
+
+
 def _metric_health_rows(
     eval_rows: list[dict],
     trend_summary: TrendSummary,
@@ -220,12 +280,10 @@ def _metric_health_rows(
             continue
         latest = metric.points[-1]
         count_bucket = metric_counts.get(metric.metric_name, {"PASS": 0, "FAIL": 0, "N/A": 0})
-        status = _status(
-            latest.avg_score,
-            latest.threshold,
-            pass_rate=latest.pass_rate,
-            pass_rate_rule=pass_rate_rule,
-            min_pass_rate=min_pass_rate,
+        status = _metric_health_status_from_counts(
+            pass_count=count_bucket["PASS"],
+            fail_count=count_bucket["FAIL"],
+            na_count=count_bucket["N/A"],
         )
         metric_rows.append(
             "<tr>"
