@@ -105,6 +105,37 @@ class EvaluationRunner:
                 mapped.append(canonical)
         return mapped
 
+    @staticmethod
+    def _is_not_found_answer(text: str | None) -> bool:
+        if not text:
+            return False
+        normalized = str(text).strip().lower()
+        return normalized in {
+            "not found in document.",
+            "not found in the document.",
+        }
+
+    def _force_fail_for_not_found(
+        self,
+        metric_name: str,
+        expected_answer: str | None,
+        actual_answer: str,
+    ) -> bool:
+        if metric_name not in {
+            "contextual_precision",
+            "contextual_recall",
+            "contextual_relevancy",
+            "answer_relevancy",
+            "faithfulness",
+            "completeness",
+        }:
+            return False
+        if not self._is_not_found_answer(actual_answer):
+            return False
+        if not expected_answer or self._is_not_found_answer(expected_answer):
+            return False
+        return True
+
     def evaluate_dataset(
         self,
         dataset_rows: Iterable[DatasetRow],
@@ -157,6 +188,28 @@ class EvaluationRunner:
             for metric_name in row_metrics:
                 canonical_name = normalize_metric_name(metric_name)
                 threshold = metric_threshold(canonical_name, self.config)
+
+                if self._force_fail_for_not_found(
+                    metric_name=canonical_name,
+                    expected_answer=row.expected_answer,
+                    actual_answer=answer,
+                ):
+                    metric_results.append(
+                        MetricResult(
+                            metric_name=canonical_name,
+                            threshold=threshold,
+                            score=0.0,
+                            passed=False,
+                            reason=(
+                                "Forced FAIL: actual output was 'Not found in document.' "
+                                "while expected_answer was provided."
+                            ),
+                            error=None,
+                            evaluation_model=None,
+                        )
+                    )
+                    continue
+
                 metric = build_metric(canonical_name, self.config)
 
                 try:

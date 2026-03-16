@@ -81,7 +81,7 @@ def _build_rows_from_goldens(
 def _write_rows(rows: List[DatasetRow], output_path: Path) -> None:
     payload = [row.model_dump() for row in rows]
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2))
+    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 def synthesize_dataset_from_contexts(

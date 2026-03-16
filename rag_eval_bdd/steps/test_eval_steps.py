@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from rag_eval_bdd.dataset_loader import (
@@ -25,8 +24,6 @@ from rag_eval_bdd.synthesize import synthesize_dataset, synthesize_dataset_from_
 
 scenarios("../features/layer1_context_metrics.feature")
 scenarios("../features/layer2_answer_metrics.feature")
-
-pytestmark = [pytest.mark.live]
 
 
 @given("backend is reachable")
@@ -162,6 +159,13 @@ def _live_context_chunk_limit() -> int:
     return parsed
 
 
+def _is_not_found_answer(text: str | None) -> bool:
+    if not text:
+        return False
+    normalized = str(text).strip().lower()
+    return normalized in {"not found in document.", "not found in the document."}
+
+
 @given(parsers.parse('I generate live dataset for layer "{layer_name}" from uploaded documents'))
 @given(parsers.parse('I generate unseen dataset for layer "{layer_name}" from uploaded documents'))
 def given_generate_live_dataset_for_layer(
@@ -181,6 +185,7 @@ def given_generate_live_dataset_for_layer(
         raise AssertionError(f"Unsupported layer '{layer_name}'. Use 'layer1' or 'layer2'.")
 
     question_count = _live_questions_per_layer()
+    generation_target = max(question_count, question_count * 3)
     output_path = framework_root / "data" / "generated" / f"{normalized_layer}_live_questions.json"
 
     if scenario_state.uploaded_documents:
@@ -188,7 +193,7 @@ def given_generate_live_dataset_for_layer(
         rows = synthesize_dataset(
             input_path=document_path,
             output_path=output_path,
-            num_questions=question_count,
+            num_questions=generation_target,
             model=app_config.model,
         )
         source_reference = str(document_path)
@@ -204,14 +209,36 @@ def given_generate_live_dataset_for_layer(
         rows = synthesize_dataset_from_contexts(
             contexts=contexts,
             output_path=output_path,
-            num_questions=question_count,
+            num_questions=generation_target,
             model=app_config.model,
             source_reference=source_reference,
         )
 
-    if len(rows) < question_count:
+    if len(rows) < generation_target:
         raise AssertionError(
-            f"Synthesizer generated only {len(rows)} rows, expected at least {question_count}."
+            f"Synthesizer generated only {len(rows)} rows, expected at least {generation_target}."
+        )
+
+    answerable_rows = []
+    if scenario_state.session_id:
+        for row in rows:
+            _, response = backend_client.ask_question(
+                session_id=scenario_state.session_id,
+                question=row.question,
+                use_cache=False,
+            )
+            if not _is_not_found_answer(str(response.get("answer", ""))):
+                answerable_rows.append(row)
+            if len(answerable_rows) >= question_count:
+                break
+    else:
+        answerable_rows = rows[:question_count]
+
+    if len(answerable_rows) < question_count:
+        raise AssertionError(
+            "Live dataset generation produced too many unanswerable questions "
+            "(backend returned 'Not found in document.'). "
+            "Increase RAG_EVAL_LIVE_CONTEXT_CHUNK_LIMIT or reduce question complexity."
         )
 
     prefix = "L1_GEN" if normalized_layer == "layer1" else "L2_GEN"
@@ -223,7 +250,7 @@ def given_generate_live_dataset_for_layer(
                 "source_reference": row.source_reference or source_reference,
             }
         )
-        for index, row in enumerate(rows[:question_count], start=1)
+        for index, row in enumerate(answerable_rows[:question_count], start=1)
     ]
 
     attach_text("live_dataset_path", str(output_path))
