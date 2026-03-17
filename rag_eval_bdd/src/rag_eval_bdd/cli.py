@@ -78,7 +78,9 @@ def _run_pytest(
     framework_root = get_framework_root()
     pytest_ini = framework_root / "pytest.ini"
 
-    cmd = [sys.executable, "-m", "pytest", "-c", str(pytest_ini)]
+    # Disable pytest-rerunfailures plugin to avoid environments where its
+    # socket-based status DB initialization fails before test collection.
+    cmd = [sys.executable, "-m", "pytest", "-p", "no:rerunfailures", "-c", str(pytest_ini)]
     if suite == "smoke":
         cmd.append("tests")
     elif suite == "all":

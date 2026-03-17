@@ -14,7 +14,7 @@ Feature: Layer 1 retrieval quality evaluation
     Then metric "contextual_precision" should be >= configured threshold
     And save results for reporting
 
-  @sanity @contextual_precision @contextual_recall @contextual_relevancy @regression
+  @sanity @contextual_precision @contextual_recall @contextual_relevancy
   Scenario: Evaluate layer1 contextual metrics from inline dataset table
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -31,7 +31,7 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_relevancy" should be >= configured threshold
     Then save results for reporting
 
-  @regression @contextual_precision @contextual_recall @contextual_relevancy @regression
+  @regression @contextual_precision @contextual_recall @contextual_relevancy
   Scenario: Evaluate layer1 contextual metrics from external dataset file
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -52,3 +52,19 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_recall" should be >= configured threshold
     And metric "contextual_relevancy" should be >= configured threshold
     And save results for reporting
+  @sanity1
+  Scenario: Evaluate layer1 contextual metrics from alternate inline dataset table
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+      """
+      | id   | question                                                                 | expected_answer                                                                                                 | category |
+      | M1Q1 | Which bowler was hit for 49 runs in his first two overs, and which batter later got out to him? | Anrich Nortje conceded 49 runs in his first two overs, and later Rinku Singh was dismissed off his bowling.    | bowling  |
+      | M1Q2 | How was Tilak Varma dismissed, on which ball, and who was the bowler?    | Tilak Varma was bowled by Marco Jansen on 11.0, and he was dismissed behind his legs.                          | wickets  |
+      | M1Q3 | What happened at 5.4, and why was that moment notable?                    | At 5.4, Ishan Kishan hit Kwena Maphaka for six, brought up his fifty off 23 balls, and then retired out.      | batting  |
+      """
+    When I evaluate all questions
+    Then metric "contextual_precision" should be >= configured threshold
+    And metric "contextual_recall" should be >= configured threshold
+    And metric "contextual_relevancy" should be >= configured threshold
+    Then save results for reporting

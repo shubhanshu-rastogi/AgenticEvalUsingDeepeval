@@ -4,8 +4,8 @@ backend:
   ask_endpoint: "/ask"
   current_session_endpoint: "/session/current"
   session_chunks_endpoint: "/session/chunks"
-  timeout_s: 120
-  retries: 3
+  timeout_s: 45
+  retries: 1
   backoff_s: 1.0
 
 thresholds:

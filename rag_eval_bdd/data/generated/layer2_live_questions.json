@@ -1,20 +1,56 @@
 [
   {
     "id": "GEN_1",
-    "question": "Describe Rabada\u2019s delivery to Rinku Singh, including shot type, placement, and resulting runs.",
-    "expected_answer": "Rabada bowled to Rinku Singh, who advanced down the track, created room, and smashed the ball over wide long-off for a six. The shot was played on the up, trusting the bounce, resulting in a maximum.",
+    "question": "Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.",
+    "expected_answer": "Umbridge exerts control through authoritarian measures like sacking teachers and restricting Harry’s activities (Quidditch, letters, visits), creating a repressive school environment. This oppression prompts Harry to resist by forming Dumbledore’s Army, fostering secret defiance and unity among students despite academic pressures and personal challenges.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
     "additional_metadata": {}
   },
   {
     "id": "GEN_2",
-    "question": "Detail how Suryakumar Yadav was caught by Linde off a slower wide off-spinner\u2019s thick top-edge.",
-    "expected_answer": "Suryakumar Yadav was caught by Linde after attempting to shovel a slower wide off-spinner behind square on the on-side. He got a thick top-edge, resulting in a simple catch for Linde at deep backward square.",
+    "question": "How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?",
+    "expected_answer": "Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visits from friends, combined with Harry’s personal struggles like distracting dreams and his crush on Cho Chang, motivate him to form Dumbledore’s Army to secretly teach his friends how to defend themselves.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:6c76e8c8-9a08-4a1e-8f6c-c3928e6e6639",
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_3",
+    "question": "Who rescues Harry during the school year’s climax and what honor do they receive?",
+    "expected_answer": "Dumbledore rescues Harry during the school year’s climax. Harry, Ron, and Hermione are honored for their service to the school.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_4",
+    "question": "How are Harry, Ron, and Hermione recognized by Dumbledore at the school year's end?",
+    "expected_answer": "Harry, Ron, and Hermione are honored by Dumbledore for their service to the school at the end of the year.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_5",
+    "question": "Who authored the UK-published Harry Potter book featuring Voldemort’s graveyard return?",
+    "expected_answer": "The UK-published Harry Potter book featuring Voldemort’s return in the graveyard is authored by J. K. Rowling.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "additional_metadata": {}
+  },
+  {
+    "id": "GEN_6",
+    "question": "How do Harry and Cedric’s decisions as joint champions compare to the consequences they face afterward?",
+    "expected_answer": "Harry and Cedric decide to be joint winners by both touching the winner’s cup, but this leads to them being transported to a graveyard where Cedric is killed by Wormtail. Harry witnesses Voldemort’s return and narrowly escapes back to Hogwarts, facing traumatic consequences despite their initial cooperation.",
+    "dataset_file": null,
+    "category": null,
+    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
     "additional_metadata": {}
   }
 ]
