@@ -68,3 +68,21 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_recall" should be >= configured threshold
     And metric "contextual_relevancy" should be >= configured threshold
     Then save results for reporting
+
+
+  @sanity2
+  Scenario: Evaluate layer1 contextual metrics from alternate inline dataset table
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+    """
+    | id   | question                                                                 | expected_answer                                                                                                   | category |
+    | M1Q1 | Which bowler conceded 49 runs in his first two overs?                     | Anrich Nortje conceded 49 runs in his first two overs.                                                             | bowling  |
+    | M1Q2 | Who dropped Suryakumar Yadav and on which delivery did it happen?         | Corbin Bosch dropped Suryakumar Yadav on 10.2.                                                                      | fielding |
+    | M1Q3 | How was Suryakumar Yadav eventually dismissed and who took the catch?     | Suryakumar Yadav was caught by Linde off Kwena Maphaka.                                                             | wickets  |
+    """
+    When I evaluate all questions
+    Then metric "contextual_precision" should be >= configured threshold
+    And metric "contextual_recall" should be >= configured threshold
+    And metric "contextual_relevancy" should be >= configured threshold
+    Then save results for reporting
