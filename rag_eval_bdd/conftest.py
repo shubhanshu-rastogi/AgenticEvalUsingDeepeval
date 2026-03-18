@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
-import shutil
 from typing import List, Optional
 
 import pytest
@@ -59,11 +58,10 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     if not _env_flag("RAG_EVAL_AUTO_HTML_REPORT_CLEAN", default=True):
         return
 
-    shutil.rmtree(report_dir, ignore_errors=True)
     report_dir.mkdir(parents=True, exist_ok=True)
     _reporter_line(
         pytest_config,
-        f"[rag-eval-bdd] cleaned previous HTML report artifacts: {report_dir}",
+        f"[rag-eval-bdd] prepared HTML report artifacts (preserved latest + timestamped history): {report_dir}",
     )
 
 
@@ -80,10 +78,10 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         )
         return
 
-    _reporter_line(pytest_config, f"[rag-eval-bdd] generated HTML report: {report_path}")
+    _reporter_line(pytest_config, f"[rag-eval-bdd] latest HTML report: {report_path}")
     _reporter_line(
         pytest_config,
-        f"[rag-eval-bdd] trend dashboard: {Path(str(pytest_config.rootpath)) / 'results' / 'trends' / 'last5.html'}",
+        f"[rag-eval-bdd] latest trend dashboard: {Path(str(pytest_config.rootpath)) / 'results' / 'trends' / 'last5.html'}",
     )
 
 

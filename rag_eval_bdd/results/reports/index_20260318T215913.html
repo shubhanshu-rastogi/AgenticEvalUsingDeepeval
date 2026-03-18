@@ -1,0 +1,737 @@
+
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Evaluation Executive Report</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f2f5fb;
+      --text: #0f172a;
+      --muted: #556277;
+      --border: #d7deea;
+      --accent: #0f5ea8;
+      --accent-soft: #e7f2ff;
+      --pass: #0f8a4c;
+      --fail: #b42318;
+      --na: #6b7280;
+      --shadow: 0 14px 42px rgba(15, 23, 42, 0.08);
+      --hero-a: #e6f0ff;
+      --hero-b: #fef7e9;
+      --hero-c: #f4ecff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% 12%, var(--hero-a), transparent 46%),
+        radial-gradient(circle at 86% 4%, var(--hero-b), transparent 42%),
+        radial-gradient(circle at 82% 92%, var(--hero-c), transparent 45%),
+        var(--bg);
+      color: var(--text);
+      font-family: "SF Pro Display", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      line-height: 1.4;
+    }
+    .container {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+    .hero {
+      background: linear-gradient(140deg, #0f172a, #132a56 45%, #18417f);
+      color: #f8fbff;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      right: -120px;
+      top: -140px;
+      background: radial-gradient(circle, rgba(255,255,255,0.2), transparent 60%);
+      pointer-events: none;
+    }
+    .hero h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(24px, 2.8vw, 36px);
+      letter-spacing: 0.2px;
+    }
+    .hero p {
+      margin: 0;
+      color: #dce8ff;
+      max-width: 920px;
+    }
+    .hero-meta {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: #cadcff;
+    }
+    .hero-meta span {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+    .summary-grid {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 5px 16px rgba(15, 23, 42, 0.05);
+    }
+    .summary-card .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .summary-card .value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .summary-card .hint {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .section {
+      margin-top: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff, var(--surface-soft));
+    }
+    .section-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .controls input, .controls select {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      height: 36px;
+      font-size: 13px;
+      padding: 0 10px;
+      min-width: 150px;
+      color: var(--text);
+    }
+    .kicker {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+    .metric-health, .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .metric-health th, .metric-health td, .report-table th, .report-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .metric-health th, .report-table th {
+      background: #f8fbff;
+      font-weight: 700;
+      color: #1a2a45;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .table-wrap {
+      overflow: auto;
+      max-height: 62vh;
+    }
+    .table-wrap table {
+      min-width: 1500px;
+    }
+    .badge {
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+      padding: 3px 9px;
+      display: inline-block;
+    }
+    .badge-pass {
+      background: #dcfce7;
+      color: var(--pass);
+      border: 1px solid #9ce8ba;
+    }
+    .badge-fail {
+      background: #fee4e2;
+      color: var(--fail);
+      border: 1px solid #f9b4af;
+    }
+    .badge-na {
+      background: #e5e7eb;
+      color: var(--na);
+      border: 1px solid #d1d5db;
+    }
+    .status-counts {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+    .count-pill {
+      min-width: 26px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      border: 1px solid transparent;
+    }
+    .count-pass {
+      color: #0f8a4c;
+      background: #dcfce7;
+      border-color: #9ce8ba;
+    }
+    .count-fail {
+      color: #b42318;
+      background: #fee4e2;
+      border-color: #f9b4af;
+    }
+    .count-na {
+      color: #854d0e;
+      background: #fef9c3;
+      border-color: #fde68a;
+    }
+    .count-sep {
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .tech-link {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .tech-link:hover {
+      text-decoration: underline;
+    }
+    .context-link {
+      border: 1px solid #bfd4f6;
+      background: #edf4ff;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .context-link:hover {
+      background: #e3eeff;
+      border-color: #9fc0ee;
+    }
+    .context-preview {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      max-width: 260px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .context-empty {
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+    }
+    .context-modal[hidden] {
+      display: none;
+    }
+    .context-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.52);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      backdrop-filter: blur(2px);
+    }
+    .context-modal-card {
+      width: min(980px, 96vw);
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
+      overflow: hidden;
+    }
+    .context-modal-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff, var(--surface-soft));
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .context-modal-title {
+      margin: 0;
+      font-size: 16px;
+    }
+    .context-modal-meta {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .context-modal-close {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .context-modal-close:hover {
+      background: #f8fbff;
+    }
+    .context-modal-body {
+      padding: 14px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      background: #fbfdff;
+    }
+    .context-modal-empty {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .context-chunk {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+    }
+    .context-chunk-label {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      letter-spacing: 0.35px;
+      text-transform: uppercase;
+    }
+    .context-chunk-text {
+      margin: 6px 0 0 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #1f2937;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .technical {
+      margin-top: 22px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+    }
+    .technical > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 16px 18px;
+      font-weight: 700;
+      background: linear-gradient(180deg, #ffffff, var(--surface-soft));
+      border-bottom: 1px solid var(--border);
+    }
+    .technical > summary::-webkit-details-marker {
+      display: none;
+    }
+    .technical-body {
+      padding: 14px 14px 22px;
+      display: grid;
+      gap: 10px;
+    }
+    .technical-body p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .run-log {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .run-log summary {
+      cursor: pointer;
+      font-weight: 600;
+      padding: 10px 12px;
+      background: #f8fbff;
+    }
+    .run-log-frame {
+      width: 100%;
+      height: 340px;
+      border: 0;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+    .log-frame {
+      width: 100%;
+      height: 420px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fbfdff;
+    }
+    .report-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .footer-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 780px) {
+      .container {
+        padding: 16px 12px 30px;
+      }
+      .hero {
+        padding: 20px 16px;
+        border-radius: 16px;
+      }
+      .section-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .controls {
+        width: 100%;
+      }
+      .controls input, .controls select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>RAG Evaluation Executive Report</h1>
+      <p>Business-oriented quality report with scenario outcomes, metric health, and a technical appendix for full traceability.</p>
+      <div class="hero-meta">
+        <span>Generated: 2026-03-18 21:59</span>
+        <span>Recent Runs: 2</span>
+        <span>Rows: 12</span>
+        <span>Status Rule: min_pass_rate (min pass rate: 100.00%)</span>
+      </div>
+    </header>
+
+    <section class="summary-grid">
+      <article class="summary-card"><span class="label">Overall Pass Rate</span><span class="value">100.00%</span></article>
+      <article class="summary-card"><span class="label">Pass / Fail / N/A</span><span class="value">12 / 0 / 0</span></article>
+      <article class="summary-card"><span class="label">Inline Data Pass Rate</span><span class="value">0.00%</span></article>
+      <article class="summary-card"><span class="label">External Data Pass Rate</span><span class="value">0.00%</span></article>
+      <article class="summary-card"><span class="label">Live Data Pass Rate</span><span class="value">100.00%</span></article>
+      <article class="summary-card"><span class="label">Top Failure Reasons</span><span class="value" style="font-size: 14px;">No failed reasons captured.</span></article>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Metric Health (Latest Trend Point)</h2>
+          <div class="kicker">Each metric's latest score, pass rate, and threshold using current report status rule.</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height: 260px;">
+        <table class="metric-health">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Latest Score</th>
+              <th>Pass Rate</th>
+              <th>Threshold</th>
+              <th>PASS / FAIL / N/A</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Answer Relevancy</td><td>1.0000</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr><tr><td>Completeness</td><td>0.9000</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr><tr><td>Contextual Precision</td><td>1.0000</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr><tr><td>Contextual Recall</td><td>1.0000</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr><tr><td>Contextual Relevancy</td><td>0.9500</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr><tr><td>Faithfulness</td><td>1.0000</td><td>100.00%</td><td>0.50</td><td><div class='status-counts'><span class='count-pill count-pass'>2</span><span class='count-sep'>/</span><span class='count-pill count-fail'>0</span><span class='count-sep'>/</span><span class='count-pill count-na'>0</span></div></td><td><span class='badge badge-pass'>PASS</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Evaluation Results</h2>
+          <div class="kicker">Columns aligned to management review needs with direct links to full technical logs.</div>
+        </div>
+        <div class="controls">
+          <input id="searchInput" type="search" placeholder="Search question / output / run..." />
+          <select id="metricFilter">
+            <option value="">All Metrics</option>
+            <option value='Answer Relevancy'>Answer Relevancy</option><option value='Completeness'>Completeness</option><option value='Contextual Precision'>Contextual Precision</option><option value='Contextual Recall'>Contextual Recall</option><option value='Contextual Relevancy'>Contextual Relevancy</option><option value='Faithfulness'>Faithfulness</option>
+          </select>
+          <select id="typeFilter">
+            <option value="">All Types</option>
+            <option value='Live Data'>Live Data</option>
+          </select>
+          <select id="statusFilter">
+            <option value="">All Results</option>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="report-table" id="reportTable">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>RunID</th>
+              <th>TimeStamp</th>
+              <th>Type</th>
+              <th>Threshold</th>
+              <th>Question</th>
+              <th>Expected Output</th>
+              <th>Actual Output</th>
+              <th>Retrieved Context</th>
+              <th>Score</th>
+              <th>Result</th>
+              <th>Reason For Score</th>
+              <th>Technical Logs</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody">
+            <tr data-metric='Answer Relevancy' data-type='Live Data' data-status='PASS' ><td>Answer Relevancy</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.'>Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dy...</td><td title='Umbridge exerts control through authoritarian measures like sacking teachers and restricting Harry’s activities (Quidditch, letters, visits), creating a repressive school environment. This oppression prompts Harry to resist by forming Dumbledore’s Army, fostering secret defiance and unity among students despite academic pressures and personal challenges.'>Umbridge exerts control through authoritarian measures like sacking teachers and restri...</td><td title='Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers and enforcing strict regulations, which creates a climate of fear and oppression. Her actions lead to widespread discontent among students and staff, as evidenced by Harry&#x27;s retaliatory formation of Dumbledore&#x27;s Army to teach his peers self-defense against dark forces. This secret group serves as a rebellion against Umbridge&#x27;s tyranny and fosters camaraderie among students, contrasting sharply with the isolation Harry feels due to the Ministry&#x27;s discrediting of him and Dumbledore. Consequently, Umbridge&#x27;s control not only intensifies Harry&#x27;s struggles but also galvanizes student resistance, altering the school dynamics significantly.'>Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers ...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_1__answer_relevancy' data-metric='Answer Relevancy' data-question='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because the response appears fully focused on analyzing Umbridge’s methods of control and their effects on Harry’s actions and the broader school dynamics, with no irrelevant statements detracting from relevance. Great job staying directly on topic.'>The score is 1.00 because the response appears fully focused on analyzing Umbridge’s methods...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Faithfulness' data-type='Live Data' data-status='PASS' ><td>Faithfulness</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.'>Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dy...</td><td title='Umbridge exerts control through authoritarian measures like sacking teachers and restricting Harry’s activities (Quidditch, letters, visits), creating a repressive school environment. This oppression prompts Harry to resist by forming Dumbledore’s Army, fostering secret defiance and unity among students despite academic pressures and personal challenges.'>Umbridge exerts control through authoritarian measures like sacking teachers and restri...</td><td title='Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers and enforcing strict regulations, which creates a climate of fear and oppression. Her actions lead to widespread discontent among students and staff, as evidenced by Harry&#x27;s retaliatory formation of Dumbledore&#x27;s Army to teach his peers self-defense against dark forces. This secret group serves as a rebellion against Umbridge&#x27;s tyranny and fosters camaraderie among students, contrasting sharply with the isolation Harry feels due to the Ministry&#x27;s discrediting of him and Dumbledore. Consequently, Umbridge&#x27;s control not only intensifies Harry&#x27;s struggles but also galvanizes student resistance, altering the school dynamics significantly.'>Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers ...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_1__faithfulness' data-metric='Faithfulness' data-question='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because there are no contradictions, so the actual output appears fully consistent with the retrieval context—great job keeping it faithful and accurate.'>The score is 1.00 because there are no contradictions, so the actual output appears fully co...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Completeness' data-type='Live Data' data-status='PASS' ><td>Completeness</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.'>Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dy...</td><td title='Umbridge exerts control through authoritarian measures like sacking teachers and restricting Harry’s activities (Quidditch, letters, visits), creating a repressive school environment. This oppression prompts Harry to resist by forming Dumbledore’s Army, fostering secret defiance and unity among students despite academic pressures and personal challenges.'>Umbridge exerts control through authoritarian measures like sacking teachers and restri...</td><td title='Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers and enforcing strict regulations, which creates a climate of fear and oppression. Her actions lead to widespread discontent among students and staff, as evidenced by Harry&#x27;s retaliatory formation of Dumbledore&#x27;s Army to teach his peers self-defense against dark forces. This secret group serves as a rebellion against Umbridge&#x27;s tyranny and fosters camaraderie among students, contrasting sharply with the isolation Harry feels due to the Ministry&#x27;s discrediting of him and Dumbledore. Consequently, Umbridge&#x27;s control not only intensifies Harry&#x27;s struggles but also galvanizes student resistance, altering the school dynamics significantly.'>Umbridge employs authoritarian methods to control Hogwarts, including sacking teachers ...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_1__completeness' data-metric='Completeness' data-question='Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>0.9000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The response addresses both required parts: Umbridge’s methods of control and their impact on Harry’s actions and overall school dynamics. It includes key specifics from the prompt, such as authoritarian rules, sacking teachers, fear and oppression, Harry forming Dumbledore’s Army, and resulting student resistance. It is clear and relevant, though it could be slightly stronger with more concrete examples of her control methods and broader effects on different groups within Hogwarts.'>The response addresses both required parts: Umbridge’s methods of control and their impact o...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Answer Relevancy' data-type='Live Data' data-status='PASS' ><td>Answer Relevancy</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?'>How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s ...</td><td title='Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visits from friends, combined with Harry’s personal struggles like distracting dreams and his crush on Cho Chang, motivate him to form Dumbledore’s Army to secretly teach his friends how to defend themselves.'>Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visit...</td><td title='Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressive rules, creates a hostile environment for Harry and his friends. As Harry faces the loss of Quidditch, communication with Sirius, and visits with Hagrid, he feels increasingly isolated. This, combined with the Ministry&#x27;s discrediting of him and Dumbledore, leads Harry to take action. He forms Dumbledore&#x27;s Army as a secret defense group to teach his friends how to fight back against the dark forces threatening them, thus channeling his frustrations and need for agency into a proactive initiative.'>Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressi...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_2__answer_relevancy' data-metric='Answer Relevancy' data-question='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because the response appears fully focused on explaining how Umbridge’s control and Harry’s personal struggles lead to the formation of Dumbledore’s Army, with no irrelevant statements noted. Strong, directly relevant answer.'>The score is 1.00 because the response appears fully focused on explaining how Umbridge’s co...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Faithfulness' data-type='Live Data' data-status='PASS' ><td>Faithfulness</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?'>How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s ...</td><td title='Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visits from friends, combined with Harry’s personal struggles like distracting dreams and his crush on Cho Chang, motivate him to form Dumbledore’s Army to secretly teach his friends how to defend themselves.'>Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visit...</td><td title='Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressive rules, creates a hostile environment for Harry and his friends. As Harry faces the loss of Quidditch, communication with Sirius, and visits with Hagrid, he feels increasingly isolated. This, combined with the Ministry&#x27;s discrediting of him and Dumbledore, leads Harry to take action. He forms Dumbledore&#x27;s Army as a secret defense group to teach his friends how to fight back against the dark forces threatening them, thus channeling his frustrations and need for agency into a proactive initiative.'>Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressi...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_2__faithfulness' data-metric='Faithfulness' data-question='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because there are no contradictions, so the actual output appears fully consistent with the retrieval context—great job keeping it faithful and accurate.'>The score is 1.00 because there are no contradictions, so the actual output appears fully co...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Completeness' data-type='Live Data' data-status='PASS' ><td>Completeness</td><td>20260318T215828Z_c3664173</td><td>2026-03-18 21:59</td><td>Live Data</td><td>0.50</td><td title='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?'>How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s ...</td><td title='Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visits from friends, combined with Harry’s personal struggles like distracting dreams and his crush on Cho Chang, motivate him to form Dumbledore’s Army to secretly teach his friends how to defend themselves.'>Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visit...</td><td title='Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressive rules, creates a hostile environment for Harry and his friends. As Harry faces the loss of Quidditch, communication with Sirius, and visits with Hagrid, he feels increasingly isolated. This, combined with the Ministry&#x27;s discrediting of him and Dumbledore, leads Harry to take action. He forms Dumbledore&#x27;s Army as a secret defense group to teach his friends how to fight back against the dark forces threatening them, thus channeling his frustrations and need for agency into a proactive initiative.'>Umbridge&#x27;s control over Hogwarts, characterized by her sacking of teachers and oppressi...</td><td><button type='button' class='context-link' data-row-id='20260318T215828Z_c3664173__L2_GEN_2__completeness' data-metric='Completeness' data-question='How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?' data-run='20260318T215828Z_c3664173'>5 chunks · View</button><div class='context-preview' title='ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...'>ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses ...</div></td><td>0.9000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The response directly answers how Umbridge’s control and Harry’s personal struggles lead to Dumbledore’s Army, covering both parts of the question. It includes key specifics from the test case, such as Umbridge’s oppressive rules, the Ministry discrediting Harry and Dumbledore, and Harry’s losses and isolation. It clearly explains that these pressures push Harry to create a secret defense group, though it could be slightly stronger by tying Umbridge more explicitly to the lack of practical Defense Against the Dark Arts instruction.'>The response directly answers how Umbridge’s control and Harry’s personal struggles lead to ...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Precision' data-type='Live Data' data-status='PASS' ><td>Contextual Precision</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?'>Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?</td><td title='Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return to Hogwarts, insisting that danger awaits him there.'>Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return t...</td><td title='Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He delivers a dire warning that Harry must not return to Hogwarts.'>Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He deli...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_1__contextual_precision' data-metric='Contextual Precision' data-question='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because the first node in retrieval contexts already contains the needed answer, identifying Dobby as &quot;a strange elfish creature named Dobby&quot; and stating the warning &quot;He must not return to Hogwarts!&quot; All lower-ranked nodes are irrelevant, since the second node is about &quot;two Dementors&quot; and a &quot;disciplinary hearing,&quot; the third node discusses &quot;Sirius Black,&quot; &quot;dementors,&quot; and &quot;Professor Lupin,&quot; the fourth node focuses on a &quot;traitor,&quot; &quot;Polyjuice Potion,&quot; and &quot;Voldemort&#x27;s return,&quot; and the fifth node covers &quot;private lessons with Dumbledore,&quot; the &quot;Half-Blood Prince,&quot; and &quot;Draco Malfoy.&quot; So the relevant node is ranked highest and the irrelevant nodes are properly ranked lower—great retrieval.'>The score is 1.00 because the first node in retrieval contexts already contains the needed a...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Recall' data-type='Live Data' data-status='PASS' ><td>Contextual Recall</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?'>Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?</td><td title='Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return to Hogwarts, insisting that danger awaits him there.'>Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return t...</td><td title='Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He delivers a dire warning that Harry must not return to Hogwarts.'>Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He deli...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_1__contextual_recall' data-metric='Contextual Recall' data-question='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because sentence 1 is fully supported by node 1 in retrieval context, which identifies Dobby as an elfish creature, places his appearance on Harry Potter&#x27;s birthday, states that he warns Harry not to return to Hogwarts, and indicates danger awaits there. Great match.'>The score is 1.00 because sentence 1 is fully supported by node 1 in retrieval context, whic...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Relevancy' data-type='Live Data' data-status='PASS' ><td>Contextual Relevancy</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?'>Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?</td><td title='Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return to Hogwarts, insisting that danger awaits him there.'>Dobby is a house-elf who appears on Harry Potter&#x27;s birthday to warn him not to return t...</td><td title='Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He delivers a dire warning that Harry must not return to Hogwarts.'>Dobby is a strange elfish creature who appears to Harry Potter on his birthday. He deli...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_1__contextual_relevancy' data-metric='Contextual Relevancy' data-question='Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The retrieval context is highly relevant because it directly identifies Dobby as a strange elfish creature/house-elf and states the exact warning he gives Harry in Chamber of Secrets: that he must not return to Hogwarts. This fully matches both parts of the question.'>The retrieval context is highly relevant because it directly identifies Dobby as a strange e...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Precision' data-type='Live Data' data-status='PASS' ><td>Contextual Precision</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?'>Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and D...</td><td title='Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging and escape from the harsh treatment by the Dursleys. Despite Dobby’s warnings, Hogwarts represents a place where he feels valued and excited for new experiences.'>Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging ...</td><td title='Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he can escape the harsh treatment from the Dursleys. He looks forward to reuniting with friends and engaging in magical learning, as indicated by his excitement about returning and his anticipation of the events that await him at Hogwarts. Dobby&#x27;s warnings do not deter him; instead, they highlight his determination to return to a place where he feels he belongs.'>Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_2__contextual_precision' data-metric='Contextual Precision' data-question='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because the relevant nodes in retrieval contexts are ranked at the top: the first node directly states that &quot;He can’t wait to get back to Hogwarts,&quot; includes Dobby’s &quot;dire warnings for Harry: He must not return to Hogwarts!&quot; and the Dursleys’ harshness when they &quot;lock Harry up in his room,&quot; while the second node supports that Harry is &quot;happy to escape the tyranny of the Dursley’s&quot; and &quot;overjoyed to be back at school.&quot; The irrelevant nodes only appear later—the third node merely says Harry &quot;heads back to school&quot; without addressing Dobby’s warnings well, the fourth focuses on Voldemort and Dementors, and the fifth is about possibly being &quot;expel[led] from Hogwarts&quot;—so the ranking is excellent.'>The score is 1.00 because the relevant nodes in retrieval contexts are ranked at the top: th...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Recall' data-type='Live Data' data-status='PASS' ><td>Contextual Recall</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?'>Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and D...</td><td title='Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging and escape from the harsh treatment by the Dursleys. Despite Dobby’s warnings, Hogwarts represents a place where he feels valued and excited for new experiences.'>Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging ...</td><td title='Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he can escape the harsh treatment from the Dursleys. He looks forward to reuniting with friends and engaging in magical learning, as indicated by his excitement about returning and his anticipation of the events that await him at Hogwarts. Dobby&#x27;s warnings do not deter him; instead, they highlight his determination to return to a place where he feels he belongs.'>Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_2__contextual_recall' data-metric='Contextual Recall' data-question='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>1.0000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The score is 1.00 because sentence 1 is fully supported by node 1 in retrieval context, which states Harry can’t wait to get back to Hogwarts, contrasts it with the Dursleys’ harsh treatment, and shows why Hogwarts feels like belonging and escape; sentence 2 is also supported by node 1, which mentions Dobby’s warnings and Harry’s refusal to stay home from school, confirming that Hogwarts still feels valuable and exciting to him. Great alignment overall.'>The score is 1.00 because sentence 1 is fully supported by node 1 in retrieval context, whic...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr><tr data-metric='Contextual Relevancy' data-type='Live Data' data-status='PASS' ><td>Contextual Relevancy</td><td>20260318T215746Z_096e0041</td><td>2026-03-18 21:58</td><td>Live Data</td><td>0.50</td><td title='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?'>Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and D...</td><td title='Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging and escape from the harsh treatment by the Dursleys. Despite Dobby’s warnings, Hogwarts represents a place where he feels valued and excited for new experiences.'>Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging ...</td><td title='Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he can escape the harsh treatment from the Dursleys. He looks forward to reuniting with friends and engaging in magical learning, as indicated by his excitement about returning and his anticipation of the events that await him at Hogwarts. Dobby&#x27;s warnings do not deter him; instead, they highlight his determination to return to a place where he feels he belongs.'>Harry Potter is eager to return to Hogwarts because he enjoys being at school, where he...</td><td><button type='button' class='context-link' data-row-id='20260318T215746Z_096e0041__L1_GEN_2__contextual_relevancy' data-metric='Contextual Relevancy' data-question='Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?' data-run='20260318T215746Z_096e0041'>5 chunks · View</button><div class='context-preview' title='and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...'>and the Chamber of Secrets It’s been another long summer at the Dursley’s for Harry Potter. He can’t wait to get back to Hogwarts and is ...</div></td><td>0.9000</td><td><span class='badge badge-pass'>PASS</span></td><td title='The retrieval context is highly relevant because it directly states that Harry &#x27;can’t wait to get back to Hogwarts&#x27; after a long summer at the Dursleys and that Dobby appears with warnings not to return. It also explains the Dursleys’ harsh treatment, including locking him in his room, which supports why Hogwarts is appealing. A small limitation is that the context implies rather than fully explains Harry’s deeper motivation beyond escaping the Dursleys and returning to school.'>The retrieval context is highly relevant because it directly states that Harry &#x27;can’t wait t...</td><td><a class='tech-link' href='#technical-logs'>View Log</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section-header" style="padding-top: 10px; padding-bottom: 10px;">
+        <div class="kicker" id="visibleCount">Visible rows: 12</div>
+        <a class="footer-link" href="#technical-logs" id="jumpToLogs">Go To Complete Logs</a>
+      </div>
+    </section>
+
+    <details class="technical" id="technical-logs">
+      <summary>Complete Technical Logs (Click To Expand)</summary>
+      <div class="technical-body">
+        <p>Summary logs are available in <code>technical_logs.json</code>. Complete per-run logs are embedded below.</p>
+        <iframe class="log-frame" src="./technical_logs.json" title="Technical Logs"></iframe>
+        <details class='run-log'><summary>20260318T215828Z_c3664173 · 2026-03-18 21:59 · Live Data</summary><iframe class='run-log-frame' src='../runs/20260318T215828Z_c3664173/results.json' title='Run log 20260318T215828Z_c3664173'></iframe></details><details class='run-log'><summary>20260318T215746Z_096e0041 · 2026-03-18 21:58 · Live Data</summary><iframe class='run-log-frame' src='../runs/20260318T215746Z_096e0041/results.json' title='Run log 20260318T215746Z_096e0041'></iframe></details>
+      </div>
+    </details>
+
+    <div class="report-footer">
+      <span>HTML report is generated from saved run artifacts under <code>results/runs/</code>.</span>
+      <div class="footer-links">
+        <a class="footer-link" href="../trends/last5.html">Open Trend Dashboard (Last 5 Runs)</a>
+        <a class="footer-link" href="./technical_logs.json">Download Full Technical Logs (JSON)</a>
+      </div>
+    </div>
+  </div>
+  <div class="context-modal" id="contextModal" hidden>
+    <div class="context-modal-card" role="dialog" aria-modal="true" aria-labelledby="contextModalTitle">
+      <div class="context-modal-header">
+        <div>
+          <h3 class="context-modal-title" id="contextModalTitle">Retrieved Context</h3>
+          <div class="context-modal-meta" id="contextModalMeta"></div>
+        </div>
+        <button type="button" class="context-modal-close" id="contextModalClose">Close</button>
+      </div>
+      <div class="context-modal-body" id="contextModalBody"></div>
+    </div>
+  </div>
+  <script type="application/json" id="contextPayload">{"20260318T215828Z_c3664173__L2_GEN_1__answer_relevancy": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,"], "20260318T215828Z_c3664173__L2_GEN_1__faithfulness": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,"], "20260318T215828Z_c3664173__L2_GEN_1__completeness": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,"], "20260318T215828Z_c3664173__L2_GEN_2__answer_relevancy": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen"], "20260318T215828Z_c3664173__L2_GEN_2__faithfulness": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen"], "20260318T215828Z_c3664173__L2_GEN_2__completeness": ["ls in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school year progresses Harry and Umbridge frequently lock horns, and she retaliates by taking away everything he cares about: Quidditch, letters from Sirius, and visits with Hagrid. So Harry fights back the only way he can, by forming a secret defense group, known as Dumbledore's Army, and teaching his friends how to fight properly. In spite of the frantic workload in preparing for their OWLs (test s that determine the student's future career choices), the tyranny of Umbridge, and Harry's unbearable crush on Ravenclaw seeker, Cho Chang, Harry keeps having tantalizing dreams of dark corridors and locked doors that are distracting at best. His scar pri ckles constantly and he", "than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is the constant mutterings of the other student s. Having spent all summer discrediting both Harry and Dumbledore, the Ministry has succeeded in convincing everyone they're both crazy and that Voldemort's return is nothing but a figment of their imagination. With only Ron and Hermione standing by his side, Harry is hard-pressed to stay in a good mood and often lashes out at the ones he is closest to. His defiant behavior lands him in detention for weeks at a time with Professor Umbridge, who soon rises to the status of Hogwarts High Inquistor and revels in sacking teachers and keeping the entire school under the control of her stubby, ugly-ringed fingers. As the school", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", "d that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot inside the school but can't for the life of him figure out what it is. Between Ron and Hermione's skepticism, and Malfoy's disappearances from the school grounds, Harry has his hands full trying to uncover what Malfoy's up to. As the year speeds by, Harry and Ron are both amazed at their blossoming love lives. Harry especially falls hard for someone he knows he shouldn't, his best friend Ron's sister, Ginny. His lessons with Dumbl edore continue sporadically, and he's excited to hear that he might be able to go with Dumbledore on a dangerous mission to help destroy a horcrux that contains a part of Voldemort's soul. Things reach a frantic pace when several things happen"], "20260318T215746Z_096e0041__L1_GEN_1__contextual_precision": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "ivate lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as much as he can about Voldemort will help Harry in his final battle with the Dark Lord. A mysterious book previously owned by the Half-Blood Prince comes into Harry's hands early on during his Potions class and changes the course of his school year by giving him a reputation for Potions brilliance that baffles everyone. Harry quickly grows to depend on the information he gets from the Half-Blood Prince's book and uses some of his spells outside of class, much to Hermione's displeasure. Harry also keeps an increasingly close eye on Draco Malfoy. Convinced that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot"], "20260318T215746Z_096e0041__L1_GEN_1__contextual_recall": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "ivate lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as much as he can about Voldemort will help Harry in his final battle with the Dark Lord. A mysterious book previously owned by the Half-Blood Prince comes into Harry's hands early on during his Potions class and changes the course of his school year by giving him a reputation for Potions brilliance that baffles everyone. Harry quickly grows to depend on the information he gets from the Half-Blood Prince's book and uses some of his spells outside of class, much to Hermione's displeasure. Harry also keeps an increasingly close eye on Draco Malfoy. Convinced that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot"], "20260318T215746Z_096e0041__L1_GEN_1__contextual_relevancy": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "ivate lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as much as he can about Voldemort will help Harry in his final battle with the Dark Lord. A mysterious book previously owned by the Half-Blood Prince comes into Harry's hands early on during his Potions class and changes the course of his school year by giving him a reputation for Potions brilliance that baffles everyone. Harry quickly grows to depend on the information he gets from the Half-Blood Prince's book and uses some of his spells outside of class, much to Hermione's displeasure. Harry also keeps an increasingly close eye on Draco Malfoy. Convinced that Malfoy has replaced his father as the head of the Death Eaters, Harry believes Malfoy is constructing a dark plot"], "20260318T215746Z_096e0041__L1_GEN_2__contextual_precision": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "ark on him, and he's more determined than ever to put an end to Voldemort and his Death Eaters. He's happy to escape the tyranny of the Dursley's early in the summer when Dumbledore picks him up to attend to a mysterious errand, which ends up in Harry's persuading ex -professor, Horace Slughorn, to come out of retirement to teach at Hogwarts again. When the day finally arrives, Harry is as usual overjoyed to be back at school. He's been made Quidditch Team Captain. However, Harry and his friends are dismayed to find out that Professor Severus Snape has finally achieved his burning desire to become Defense Against the Dark Arts professor. Harry is excited to be taking private lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is"], "20260318T215746Z_096e0041__L1_GEN_2__contextual_recall": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "ark on him, and he's more determined than ever to put an end to Voldemort and his Death Eaters. He's happy to escape the tyranny of the Dursley's early in the summer when Dumbledore picks him up to attend to a mysterious errand, which ends up in Harry's persuading ex -professor, Horace Slughorn, to come out of retirement to teach at Hogwarts again. When the day finally arrives, Harry is as usual overjoyed to be back at school. He's been made Quidditch Team Captain. However, Harry and his friends are dismayed to find out that Professor Severus Snape has finally achieved his burning desire to become Defense Against the Dark Arts professor. Harry is excited to be taking private lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is"], "20260318T215746Z_096e0041__L1_GEN_2__contextual_relevancy": ["and the Chamber of Secrets It\u2019s been another long summer at the Dursley\u2019s for Harry Potter. He can\u2019t wait to get back to Hogwarts and is counting down the days until he can return. He\u2019s surprised when, on his birthday, a strange elfish creature named Dobby shows up with dire warnings for Harry: He must not return to Hogwarts! When Harry refuses to stay home from school, Dobby lands him in heaps of trouble with the Dur sley\u2019s, who lock Harry up in his room and refuse to let him out. Before Harry can sink too far into despair, however, Ron Weasley and his two brothers, twins Fred and George, come to his rescue in a flying car and spirit him back to their house, where Harry is thrilled to spend the remainder of the summer. Thus starts an eventful second year for Harry Potter. Between having", "ark on him, and he's more determined than ever to put an end to Voldemort and his Death Eaters. He's happy to escape the tyranny of the Dursley's early in the summer when Dumbledore picks him up to attend to a mysterious errand, which ends up in Harry's persuading ex -professor, Horace Slughorn, to come out of retirement to teach at Hogwarts again. When the day finally arrives, Harry is as usual overjoyed to be back at school. He's been made Quidditch Team Captain. However, Harry and his friends are dismayed to find out that Professor Severus Snape has finally achieved his burning desire to become Defense Against the Dark Arts professor. Harry is excited to be taking private lessons with Dumbledore this year, who is showing him all about Voldemort's past. Dumbledore hopes that knowing as", "ear at Hogwarts rather eventfully when he inadvertently blows up his Aunt Marge, goes on the run, and is then personally absolved by the Minister of Magic himself. He then learns that mass murderer, Sirius Black, is intent on killing him, and Mr. Weasley makes him promise a strange thing, that no matter what he hears h e won\u2019t go looking for Black. Confused, Harry agrees. As he heads back to school armed with this knowledge, he learns that dementors, evil, soul-sucking creatures, have been stationed around Hogwarts to protect the students from Black. The dementors affect Harry much more than the other students because of his terrible past, and he quickly resolves to learn to defend himself when he begins collapsing every time they come near. He finds a willing teacher in Professor Lupin,", ", but then Harry discovers, that he is a traitor, who infiltrated Hogwarts in order of Voldemort. He\u2019s a Death Eater who transmuted his body with Polyjuice Potion. Harry warns Dumbledore and the Minister of Magic, Cornelius Fudge about the occurrence wit Voldemort, but only Dumbledore believes him. He starts to arrange the defense for the return of the dark lord. Harry Potter and the Order of the Phoenix It's been another long, hot summer at the Dursleys' for Harry Potter. Having spent m ost of it in an adolescent \"funk\" of depression and bitterness over the lack of informative letters from his friends about Voldemort's return, he's suddenly jolted out of his bad mood when two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic", "hen two Dementors show up in the town of Little Whinging and attack Har ry and his cousin, Dudley. When Harry uses magic to drive them off, however, he quickly receives a succession of owls from the Ministry, requiring him to attend a disciplinary hearing. His heart sinks when he reads that the question of whether to expel him from Hogwarts will be decided at the hearing. Harry is exonerated at the hearing but when Harry finally manages to make it back to school, he finds things are different than when he left. Hagrid's missing, there are skeletal horses pulling the school carr iages that only he can see, and the new Defense Against the Dark Arts teacher is none other than toadlike, repulsive Dolores Umbridge, a Ministry representative whom Harry is all too familiar with. Even worse is"]}</script>
+  <script>
+    (function () {
+      const searchInput = document.getElementById("searchInput");
+      const metricFilter = document.getElementById("metricFilter");
+      const typeFilter = document.getElementById("typeFilter");
+      const statusFilter = document.getElementById("statusFilter");
+      const rows = Array.from(document.querySelectorAll("#reportBody tr"));
+      const visibleCount = document.getElementById("visibleCount");
+      const techDetails = document.getElementById("technical-logs");
+      const jumpToLogs = document.getElementById("jumpToLogs");
+      const inlineTechLinks = Array.from(document.querySelectorAll(".tech-link"));
+      const contextLinks = Array.from(document.querySelectorAll(".context-link"));
+      const contextModal = document.getElementById("contextModal");
+      const contextModalBody = document.getElementById("contextModalBody");
+      const contextModalMeta = document.getElementById("contextModalMeta");
+      const contextModalClose = document.getElementById("contextModalClose");
+      const contextPayloadNode = document.getElementById("contextPayload");
+      const contextPayload = contextPayloadNode ? JSON.parse(contextPayloadNode.textContent || "{}") : {};
+
+      function normalize(text) {
+        return (text || "").toLowerCase();
+      }
+
+      function applyFilters() {
+        const query = normalize(searchInput.value);
+        const metric = metricFilter.value;
+        const type = typeFilter.value;
+        const status = statusFilter.value;
+        let visible = 0;
+
+        rows.forEach((row) => {
+          const metricMatch = !metric || row.dataset.metric === metric;
+          const typeMatch = !type || row.dataset.type === type;
+          const statusMatch = !status || row.dataset.status === status;
+          const textMatch = !query || normalize(row.innerText).includes(query);
+          const show = metricMatch && typeMatch && statusMatch && textMatch;
+          row.style.display = show ? "" : "none";
+          if (show) visible += 1;
+        });
+
+        visibleCount.textContent = `Visible rows: ${visible}`;
+      }
+
+      [searchInput, metricFilter, typeFilter, statusFilter].forEach((el) => {
+        el.addEventListener("input", applyFilters);
+        el.addEventListener("change", applyFilters);
+      });
+
+      jumpToLogs.addEventListener("click", () => {
+        techDetails.open = true;
+      });
+
+      inlineTechLinks.forEach((link) => {
+        link.addEventListener("click", () => {
+          techDetails.open = true;
+        });
+      });
+
+      function closeContextModal() {
+        contextModal.setAttribute("hidden", "hidden");
+        contextModalBody.innerHTML = "";
+        contextModalMeta.textContent = "";
+        document.body.style.overflow = "";
+      }
+
+      function openContextModal(link) {
+        const rowId = link.dataset.rowId || "";
+        const chunks = Array.isArray(contextPayload[rowId]) ? contextPayload[rowId] : [];
+        const metric = link.dataset.metric || "Metric";
+        const runId = link.dataset.run || "Run";
+        const question = link.dataset.question || "";
+
+        contextModalMeta.textContent = `${metric} · ${runId} · ${chunks.length} chunk${chunks.length === 1 ? "" : "s"}`;
+        contextModalBody.innerHTML = "";
+
+        if (question) {
+          const questionCard = document.createElement("article");
+          questionCard.className = "context-chunk";
+
+          const questionLabel = document.createElement("p");
+          questionLabel.className = "context-chunk-label";
+          questionLabel.textContent = "Question";
+          questionCard.appendChild(questionLabel);
+
+          const questionText = document.createElement("p");
+          questionText.className = "context-chunk-text";
+          questionText.textContent = question;
+          questionCard.appendChild(questionText);
+
+          contextModalBody.appendChild(questionCard);
+        }
+
+        if (!chunks.length) {
+          const empty = document.createElement("p");
+          empty.className = "context-modal-empty";
+          empty.textContent = "No retrieval context captured for this row.";
+          contextModalBody.appendChild(empty);
+        } else {
+          chunks.forEach((chunk, idx) => {
+            const card = document.createElement("article");
+            card.className = "context-chunk";
+
+            const label = document.createElement("p");
+            label.className = "context-chunk-label";
+            label.textContent = `Chunk ${idx + 1}`;
+            card.appendChild(label);
+
+            const body = document.createElement("p");
+            body.className = "context-chunk-text";
+            body.textContent = chunk || "";
+            card.appendChild(body);
+
+            contextModalBody.appendChild(card);
+          });
+        }
+
+        contextModal.removeAttribute("hidden");
+        document.body.style.overflow = "hidden";
+      }
+
+      contextLinks.forEach((link) => {
+        link.addEventListener("click", () => openContextModal(link));
+      });
+      contextModalClose.addEventListener("click", closeContextModal);
+      contextModal.addEventListener("click", (event) => {
+        if (event.target === contextModal) {
+          closeContextModal();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !contextModal.hasAttribute("hidden")) {
+          closeContextModal();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

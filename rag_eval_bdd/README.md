@@ -8,16 +8,20 @@ Business-friendly and technical RAG evaluation framework built with `pytest-bdd`
 - Supports tag-based execution (`@smoke`, `@sanity`, `@regression`, metric tags, layer tags).
 - Stores every run as JSON under `results/runs/<run_id>/results.json`.
 - Generates two HTML reports:
-  - `results/reports/index.html`: current execution session only
+  - `results/reports/index.html`: latest executive report
+  - `results/reports/index_<YYYYMMDDTHHMMSS>.html`: timestamped executive snapshots (kept for last 5 reports including latest `index.html`)
   - `results/trends/last5.html`: trend dashboard across recent runs
 
 ## Reporting model
 
-### 1) Executive report (current run only)
+### 1) Executive report (latest + timestamped history)
 
 `results/reports/index.html`
 
-- Shows only scenarios executed in the current pytest session.
+- `index.html` always points to the latest generated executive report.
+- Timestamped snapshots are stored as `index_<YYYYMMDDTHHMMSS>.html`.
+- Retention keeps the latest `index.html` plus up to 4 timestamped snapshots (last 5 reports total).
+- Report content shows scenarios executed in the current pytest session.
 - Includes business table columns:
   - Metric
   - RunID
@@ -94,6 +98,7 @@ Notes:
 - Layer and metric tags can be combined.
 - Runtime live mode auto-picks the latest document uploaded in the application UI (`http://localhost:5173`).
 - Runtime live generation uses `2` questions per layer by default. Override with `RAG_EVAL_LIVE_QUESTIONS_PER_LAYER=<N>`.
+- Runtime live generation reuses `data/generated/layer*_live_questions.json` if it already has rows; synthesis runs only when that file is missing or empty.
 - Optional fallback (file-path mode): set `RAG_EVAL_LIVE_DOCUMENT` and use the env-based upload step.
 
 ## Tag conventions
@@ -153,7 +158,8 @@ Important sections:
 - `results/runs/<run_id>/results.json`: full run artifact
 - `results/index.json`: recent historical run index (for trends)
 - `results/current_index.json`: current session run index (for executive report)
-- `results/reports/index.html`: current execution session report
+- `results/reports/index.html`: latest executive report
+- `results/reports/index_<YYYYMMDDTHHMMSS>.html`: timestamped executive snapshots (last 5 total reports with latest as `index.html`)
 - `results/reports/technical_logs.json`: executive report logs payload
 - `results/trends/last5.json`: trend data
 - `results/trends/last5.html`: trend dashboard

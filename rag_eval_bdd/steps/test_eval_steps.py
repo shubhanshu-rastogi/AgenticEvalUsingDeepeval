@@ -166,6 +166,15 @@ def _is_not_found_answer(text: str | None) -> bool:
     return normalized in {"not found in document.", "not found in the document."}
 
 
+def _load_existing_live_dataset(output_path: Path):
+    if not output_path.exists():
+        return []
+    try:
+        return load_dataset_file(output_path)
+    except Exception:  # noqa: BLE001
+        return []
+
+
 @given(parsers.parse('I generate live dataset for layer "{layer_name}" from uploaded documents'))
 @given(parsers.parse('I generate unseen dataset for layer "{layer_name}" from uploaded documents'))
 def given_generate_live_dataset_for_layer(
@@ -187,37 +196,46 @@ def given_generate_live_dataset_for_layer(
     question_count = _live_questions_per_layer()
     generation_target = max(question_count, question_count * 3)
     output_path = framework_root / "data" / "generated" / f"{normalized_layer}_live_questions.json"
+    existing_rows = _load_existing_live_dataset(output_path)
+    reused_existing_dataset = len(existing_rows) > 0
+    rows = existing_rows
+    source_reference = (
+        str(Path(scenario_state.uploaded_documents[-1]).resolve())
+        if scenario_state.uploaded_documents
+        else f"session:{scenario_state.session_id}"
+    )
 
-    if scenario_state.uploaded_documents:
-        document_path = Path(scenario_state.uploaded_documents[-1]).resolve()
-        rows = synthesize_dataset(
-            input_path=document_path,
-            output_path=output_path,
-            num_questions=generation_target,
-            model=app_config.model,
-        )
-        source_reference = str(document_path)
-    else:
-        chunk_limit = _live_context_chunk_limit()
-        chunks = backend_client.get_session_chunks(limit=chunk_limit)
-        contexts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
-        if not contexts:
-            raise AssertionError(
-                "No retrieval chunks found for active UI session. Upload a document in UI and try again."
+    if not reused_existing_dataset:
+        if scenario_state.uploaded_documents:
+            document_path = Path(scenario_state.uploaded_documents[-1]).resolve()
+            rows = synthesize_dataset(
+                input_path=document_path,
+                output_path=output_path,
+                num_questions=generation_target,
+                model=app_config.model,
             )
-        source_reference = f"session:{scenario_state.session_id}"
-        rows = synthesize_dataset_from_contexts(
-            contexts=contexts,
-            output_path=output_path,
-            num_questions=generation_target,
-            model=app_config.model,
-            source_reference=source_reference,
-        )
+            source_reference = str(document_path)
+        else:
+            chunk_limit = _live_context_chunk_limit()
+            chunks = backend_client.get_session_chunks(limit=chunk_limit)
+            contexts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
+            if not contexts:
+                raise AssertionError(
+                    "No retrieval chunks found for active UI session. Upload a document in UI and try again."
+                )
+            source_reference = f"session:{scenario_state.session_id}"
+            rows = synthesize_dataset_from_contexts(
+                contexts=contexts,
+                output_path=output_path,
+                num_questions=generation_target,
+                model=app_config.model,
+                source_reference=source_reference,
+            )
 
-    if len(rows) < generation_target:
-        raise AssertionError(
-            f"Synthesizer generated only {len(rows)} rows, expected at least {generation_target}."
-        )
+        if len(rows) < generation_target:
+            raise AssertionError(
+                f"Synthesizer generated only {len(rows)} rows, expected at least {generation_target}."
+            )
 
     answerable_rows = []
     if scenario_state.session_id:
@@ -254,6 +272,7 @@ def given_generate_live_dataset_for_layer(
     ]
 
     attach_text("live_dataset_path", str(output_path))
+    attach_text("live_dataset_mode", "reused_existing" if reused_existing_dataset else "generated_new")
     attach_json("live_dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
 
 

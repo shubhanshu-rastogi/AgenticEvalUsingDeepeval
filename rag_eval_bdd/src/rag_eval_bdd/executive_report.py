@@ -6,6 +6,7 @@ import html
 import json
 import re
 from pathlib import Path
+import shutil
 from typing import Dict, Iterable, List
 
 from rag_eval_bdd.models import RunResult, TrendSummary
@@ -297,6 +298,38 @@ def _metric_health_rows(
             "</tr>"
         )
     return "".join(metric_rows)
+
+
+def _snapshot_executive_report(
+    output_path: Path,
+    generated_at: str,
+    keep_last_n: int = 5,
+) -> None:
+    if keep_last_n <= 1:
+        return
+    if not output_path.exists():
+        return
+
+    report_dir = output_path.parent
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    except Exception:  # noqa: BLE001
+        dt = datetime.utcnow()
+
+    timestamp_token = dt.strftime("%Y%m%dT%H%M%S")
+    snapshot_path = report_dir / f"index_{timestamp_token}.html"
+    suffix = 1
+    while snapshot_path.exists():
+        snapshot_path = report_dir / f"index_{timestamp_token}_{suffix}.html"
+        suffix += 1
+
+    shutil.copy2(output_path, snapshot_path)
+
+    snapshots = sorted(report_dir.glob("index_*.html"), reverse=True)
+    for stale_snapshot in snapshots[max(0, keep_last_n - 1):]:
+        stale_snapshot.unlink(missing_ok=True)
 
 
 def write_executive_html(
@@ -1152,4 +1185,9 @@ def write_executive_html(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html_doc)
+    _snapshot_executive_report(
+        output_path=output_path,
+        generated_at=trend_summary.generated_at,
+        keep_last_n=5,
+    )
     return output_path
