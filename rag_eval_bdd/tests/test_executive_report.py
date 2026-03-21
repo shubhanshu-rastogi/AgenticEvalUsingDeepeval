@@ -90,6 +90,8 @@ def test_write_executive_html_contains_business_table_and_technical_logs(tmp_pat
     assert "Retrieved Context" in html
     assert "contextModal" in html
     assert "context-link" in html
+    assert "metric-tip-btn" in html
+    assert html.count("How clean and focused was the retrieved evidence?") >= 2
     assert "Open Trend Dashboard (Last 5 Runs)" in html
     assert "../trends/last5.html" in html
     assert "Download Full Technical Logs (JSON)" in html
@@ -190,7 +192,7 @@ def test_metric_health_counts_aggregate_across_loaded_runs(tmp_path: Path):
     )
     html = output.read_text()
     metric_row_match = re.search(
-        r"<tr><td>Contextual Precision</td>.*?</tr>",
+        r"<tr><td>.*?Contextual Precision.*?</td>.*?count-pill count-pass.*?</tr>",
         html,
         flags=re.DOTALL,
     )
@@ -298,7 +300,7 @@ def test_metric_health_status_fails_when_metric_has_any_failed_rows(tmp_path: Pa
     )
     html = output.read_text()
     metric_row_match = re.search(
-        r"<tr><td>Contextual Precision</td>.*?</tr>",
+        r"<tr><td>.*?Contextual Precision.*?</td>.*?count-pill count-pass.*?</tr>",
         html,
         flags=re.DOTALL,
     )

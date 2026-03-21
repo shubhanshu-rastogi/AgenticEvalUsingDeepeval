@@ -77,6 +77,31 @@ def _normalize_metric(name: str) -> str:
     return name.replace("_", " ").title()
 
 
+_METRIC_TOOLTIPS: Dict[str, str] = {
+    "contextual_recall": "Did the system retrieve the necessary evidence?",
+    "contextual_precision": "How clean and focused was the retrieved evidence?",
+    "contextual_relevancy": "How useful was the retrieved information overall?",
+    "answer_relevancy": "Did the answer directly respond to the question?",
+    "faithfulness": "Is the answer supported by the retrieved evidence?",
+    "completeness": "Did the answer include all important details?",
+}
+
+
+def _metric_label_with_tooltip(metric_name: str) -> str:
+    label = html.escape(_normalize_metric(metric_name))
+    tooltip = _METRIC_TOOLTIPS.get(metric_name)
+    if not tooltip:
+        return label
+    tooltip_text = html.escape(tooltip)
+    return (
+        "<span class='metric-tip-wrap'>"
+        f"<span class='metric-tip-label'>{label}</span>"
+        "<button type='button' class='metric-tip-btn' aria-label='Metric definition' aria-expanded='false'>ⓘ</button>"
+        f"<span class='metric-tip-popup' role='tooltip'>{tooltip_text}</span>"
+        "</span>"
+    )
+
+
 def _infer_data_source(scenario_name: str) -> str:
     lowered = scenario_name.lower()
     if "live" in lowered or "unseen" in lowered:
@@ -288,7 +313,7 @@ def _metric_health_rows(
         )
         metric_rows.append(
             "<tr>"
-            f"<td>{html.escape(_normalize_metric(metric.metric_name))}</td>"
+            f"<td>{_metric_label_with_tooltip(metric.metric_name)}</td>"
             f"<td>{_format_score(latest.avg_score)}</td>"
             f"<td>{'N/A' if latest.pass_rate is None else f'{latest.pass_rate:.2f}%'}"
             "</td>"
@@ -428,7 +453,7 @@ def write_executive_html(
             f"data-type='{html.escape(row['type'])}' "
             f"data-status='{html.escape(row['status'])}' "
             ">"
-            f"<td>{html.escape(row['metric_label'])}</td>"
+            f"<td>{_metric_label_with_tooltip(row['metric'])}</td>"
             f"<td>{html.escape(row['run_id'])}</td>"
             f"<td>{html.escape(row['timestamp_short'])}</td>"
             f"<td>{html.escape(row['type'])}</td>"
@@ -603,6 +628,60 @@ def write_executive_html(
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
+    }}
+    .metric-tip-wrap {{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+    }}
+    .metric-tip-label {{
+      display: inline-block;
+    }}
+    .metric-tip-btn {{
+      border: 1px solid #bfd4f6;
+      background: #edf4ff;
+      color: var(--accent);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }}
+    .metric-tip-btn:hover {{
+      background: #e3eeff;
+      border-color: #9fc0ee;
+    }}
+    .metric-tip-popup {{
+      display: none;
+      position: absolute;
+      left: 0;
+      top: calc(100% + 8px);
+      z-index: 20;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #bfd4f6;
+      background: #edf4ff;
+      color: #1a2a45;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: normal;
+    }}
+    .metric-tip-wrap:hover .metric-tip-popup,
+    .metric-tip-wrap:focus-within .metric-tip-popup,
+    .metric-tip-wrap.is-open .metric-tip-popup {{
+      display: block;
     }}
     .metric-health th, .metric-health td, .report-table th, .report-table td {{
       border-bottom: 1px solid var(--border);
@@ -1061,6 +1140,7 @@ def write_executive_html(
       const contextModalClose = document.getElementById("contextModalClose");
       const contextPayloadNode = document.getElementById("contextPayload");
       const contextPayload = contextPayloadNode ? JSON.parse(contextPayloadNode.textContent || "{{}}") : {{}};
+      const metricTipButtons = Array.from(document.querySelectorAll(".metric-tip-btn"));
 
       function normalize(text) {{
         return (text || "").toLowerCase();
@@ -1172,7 +1252,36 @@ def write_executive_html(
           closeContextModal();
         }}
       }});
+      function closeMetricTips() {{
+        document.querySelectorAll(".metric-tip-wrap.is-open").forEach((el) => {{
+          el.classList.remove("is-open");
+          const btn = el.querySelector(".metric-tip-btn");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+        }});
+      }}
+      metricTipButtons.forEach((btn) => {{
+        btn.addEventListener("click", (event) => {{
+          event.preventDefault();
+          event.stopPropagation();
+          const wrap = btn.closest(".metric-tip-wrap");
+          if (!wrap) return;
+          const shouldOpen = !wrap.classList.contains("is-open");
+          closeMetricTips();
+          if (shouldOpen) {{
+            wrap.classList.add("is-open");
+            btn.setAttribute("aria-expanded", "true");
+          }}
+        }});
+      }});
+      document.addEventListener("click", (event) => {{
+        if (!event.target.closest(".metric-tip-wrap")) {{
+          closeMetricTips();
+        }}
+      }});
       document.addEventListener("keydown", (event) => {{
+        if (event.key === "Escape") {{
+          closeMetricTips();
+        }}
         if (event.key === "Escape" && !contextModal.hasAttribute("hidden")) {{
           closeContextModal();
         }}

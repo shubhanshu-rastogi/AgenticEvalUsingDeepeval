@@ -1,46 +1,22 @@
 {
-  "generated_at": "2026-03-18T22:47:58.296166+00:00",
+  "generated_at": "2026-03-19T13:24:07.894626+00:00",
   "run_files": [
     {
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
-      "path": "../runs/20260318T224707Z_c1217151/results.json"
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
+      "path": "../runs/20260319T132314Z_1614e52b/results.json"
     }
   ],
   "rows": [
     {
-      "metric": "contextual_precision",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
-      "type": "Inline Data",
-      "threshold": 0.5,
-      "score": 0.25,
-      "question_id": "M1Q1",
-      "question": "Which bowler conceded 49 runs in his first two overs?",
-      "expected_output": "Anrich Nortje conceded 49 runs in his first two overs.",
-      "actual_output": "Nortje conceded 49 runs in his first two overs.",
-      "retrieval_context": [
-        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
-        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
-        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
-        ". Just a flick of the wrists as he whips it over deep backward square leg for a flat maximum. He generated so much power with his bottom hand there 17.3 6 Nortje to Hardik Pandya, SIX, Hardik Pandya doesn't need any sighters! A slower full-toss angling in, Hardik Pandya is early into the big hit actually but his bat swing and power helps him. His bottom hand comes off the handle but he still gets it over long-on for a maximum 17.2 W Nortje to Rinku Singh, out Caught by Stubbs!! Some respite for Nortje! He was smashed for 49 runs in his first two overs but now has something to smile about! A pitched up delivery on off, Rinku Singh clears his front leg and tries to hit it downtown but only manages to get it off the toe- end towards long-on. Stubbs moves across to his right and gets low to",
-        "leg, goes hard on the cross-batted smash and connects well enough 2.3 6 Rabada to Ishan Kishan, SIX, what form he's in! Good length from Rabada, it's around middle and Kishan effortlessly picks it up over midwicket 2 4 Marco Jansen to Ishan Kishan, FOUR, in the slot and punished! Pitched up from Jansen, right in the hitting arc and Kishan lofts it comfortably over mid-off. Already off to a flier! Might've been the slower one but got the length wrong 0.5 6 Ngidi to Ishan Kishan, SIX, too easy! Full delivery swinging down the leg-side, free swing for Kishan who dumps it over fine leg 0.2 6 Ngidi to Ishan Kishan, SIX, first one of the evening! Full and straight, hint of inswing and Kishan whacks it over mid-on to clear the ropes. Lovely swing of the bat!"
-      ],
-      "result": "FAIL",
-      "reason_for_score": "The score is 0.25 because the first three nodes in retrieval contexts are irrelevant: the first node says it 'does not mention the bowler who was smashed for 49 runs in his first two overs,' the second node 'does not contain the key fact about conceding 49 runs in his first two overs,' and the third node 'does not identify any bowler who conceded 49 runs in his first two overs.' The relevant evidence appears only at the fourth node in retrieval contexts, where it explicitly says 'Nortje ... was smashed for 49 runs in his first two overs.' This keeps the score from being higher because several irrelevant nodes are ranked above the key answer, but it is still at 0.25 because a clearly relevant node is present before the final irrelevant node.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
-      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
-    },
-    {
-      "metric": "contextual_recall",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
+      "metric": "answer_relevancy",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
       "type": "Inline Data",
       "threshold": 0.5,
       "score": 1.0,
-      "question_id": "M1Q1",
+      "question_id": "L2D1",
       "question": "Which bowler conceded 49 runs in his first two overs?",
       "expected_output": "Anrich Nortje conceded 49 runs in his first two overs.",
       "actual_output": "Nortje conceded 49 runs in his first two overs.",
@@ -52,19 +28,19 @@
         "leg, goes hard on the cross-batted smash and connects well enough 2.3 6 Rabada to Ishan Kishan, SIX, what form he's in! Good length from Rabada, it's around middle and Kishan effortlessly picks it up over midwicket 2 4 Marco Jansen to Ishan Kishan, FOUR, in the slot and punished! Pitched up from Jansen, right in the hitting arc and Kishan lofts it comfortably over mid-off. Already off to a flier! Might've been the slower one but got the length wrong 0.5 6 Ngidi to Ishan Kishan, SIX, too easy! Full delivery swinging down the leg-side, free swing for Kishan who dumps it over fine leg 0.2 6 Ngidi to Ishan Kishan, SIX, first one of the evening! Full and straight, hint of inswing and Kishan whacks it over mid-on to clear the ropes. Lovely swing of the bat!"
       ],
       "result": "PASS",
-      "reason_for_score": "The score is 1.00 because sentence 1 is fully supported by node 4 in the retrieval context, which states that Anrich Nortje was smashed for 49 runs in his first two overs\u2014an exact match. Great retrieval coverage.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
+      "reason_for_score": "The score is 1.00 because the response directly addresses the question without any irrelevant information, providing a clear and concise answer.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
       "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
+      "evaluation_model": "gpt-4.1-mini"
     },
     {
-      "metric": "contextual_relevancy",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
+      "metric": "faithfulness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
       "type": "Inline Data",
       "threshold": 0.5,
       "score": 1.0,
-      "question_id": "M1Q1",
+      "question_id": "L2D1",
       "question": "Which bowler conceded 49 runs in his first two overs?",
       "expected_output": "Anrich Nortje conceded 49 runs in his first two overs.",
       "actual_output": "Nortje conceded 49 runs in his first two overs.",
@@ -76,93 +52,45 @@
         "leg, goes hard on the cross-batted smash and connects well enough 2.3 6 Rabada to Ishan Kishan, SIX, what form he's in! Good length from Rabada, it's around middle and Kishan effortlessly picks it up over midwicket 2 4 Marco Jansen to Ishan Kishan, FOUR, in the slot and punished! Pitched up from Jansen, right in the hitting arc and Kishan lofts it comfortably over mid-off. Already off to a flier! Might've been the slower one but got the length wrong 0.5 6 Ngidi to Ishan Kishan, SIX, too easy! Full delivery swinging down the leg-side, free swing for Kishan who dumps it over fine leg 0.2 6 Ngidi to Ishan Kishan, SIX, first one of the evening! Full and straight, hint of inswing and Kishan whacks it over mid-on to clear the ropes. Lovely swing of the bat!"
       ],
       "result": "PASS",
-      "reason_for_score": "The retrieval context is highly relevant because it directly contains the answer to the question: it states that Nortje 'was smashed for 49 runs in his first two overs.' This exactly matches the query asking which bowler conceded 49 runs in his first two overs, so the context fully supports identifying the bowler.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
+      "reason_for_score": "The score is 1.00 because there are no contradictions; the actual output fully aligns with the retrieval context. Great job maintaining accuracy!",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
       "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
+      "evaluation_model": "gpt-4.1-mini"
     },
     {
-      "metric": "contextual_precision",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
+      "metric": "completeness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
+      "type": "Inline Data",
+      "threshold": 0.5,
+      "score": 0.9493267781615197,
+      "question_id": "L2D1",
+      "question": "Which bowler conceded 49 runs in his first two overs?",
+      "expected_output": "Anrich Nortje conceded 49 runs in his first two overs.",
+      "actual_output": "Nortje conceded 49 runs in his first two overs.",
+      "retrieval_context": [
+        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
+        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
+        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
+        ". Just a flick of the wrists as he whips it over deep backward square leg for a flat maximum. He generated so much power with his bottom hand there 17.3 6 Nortje to Hardik Pandya, SIX, Hardik Pandya doesn't need any sighters! A slower full-toss angling in, Hardik Pandya is early into the big hit actually but his bat swing and power helps him. His bottom hand comes off the handle but he still gets it over long-on for a maximum 17.2 W Nortje to Rinku Singh, out Caught by Stubbs!! Some respite for Nortje! He was smashed for 49 runs in his first two overs but now has something to smile about! A pitched up delivery on off, Rinku Singh clears his front leg and tries to hit it downtown but only manages to get it off the toe- end towards long-on. Stubbs moves across to his right and gets low to",
+        "leg, goes hard on the cross-batted smash and connects well enough 2.3 6 Rabada to Ishan Kishan, SIX, what form he's in! Good length from Rabada, it's around middle and Kishan effortlessly picks it up over midwicket 2 4 Marco Jansen to Ishan Kishan, FOUR, in the slot and punished! Pitched up from Jansen, right in the hitting arc and Kishan lofts it comfortably over mid-off. Already off to a flier! Might've been the slower one but got the length wrong 0.5 6 Ngidi to Ishan Kishan, SIX, too easy! Full delivery swinging down the leg-side, free swing for Kishan who dumps it over fine leg 0.2 6 Ngidi to Ishan Kishan, SIX, first one of the evening! Full and straight, hint of inswing and Kishan whacks it over mid-on to clear the ropes. Lovely swing of the bat!"
+      ],
+      "result": "PASS",
+      "reason_for_score": "The response directly answers the question by naming Nortje as the bowler who conceded 49 runs in his first two overs, fully addressing the query with the specific detail requested.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
+      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
+      "evaluation_model": "gpt-4.1-mini"
+    },
+    {
+      "metric": "answer_relevancy",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
       "type": "Inline Data",
       "threshold": 0.5,
       "score": 1.0,
-      "question_id": "M1Q2",
-      "question": "Who dropped Suryakumar Yadav and on which delivery did it happen?",
-      "expected_output": "Corbin Bosch dropped Suryakumar Yadav on 10.2.",
-      "actual_output": "Suryakumar Yadav was dropped by Bosch on delivery 10.2, which was a length ball on leg.",
-      "retrieval_context": [
-        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
-        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
-        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
-        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
-        "ntact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside off, dips on him but he reaches out and clobbers it over long-on 5.4 F Kwena Maphaka to Ishan Kishan, SIX, huge swipe across the line and the slower ball disappears! Full in the slot, Kishan goes hard and whacks it over midwicket. Brings up fifty off just 23 balls and is walking back to the dugout! Retired out! Surya welcomes him back with a pat on his helmet 5 6 Nortje to Ishan Kishan, SIX, don't think Kishan knew much about that but he'll take it. Has a smile as he walks to Abhishek. Sharp bumper from round the wicket, seemed like a half-hearted pull, almost like he was bailing out of the shot. Flies off the top-edge over fine leg 4.5 4 Nortje to Ishan Kishan, FOUR,"
-      ],
-      "result": "PASS",
-      "reason_for_score": "The score is 1.00 because the first node in retrieval contexts already contains the exact answer, stating \"10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped!... Toe-ends it in the air to deep midwicket and Bosch makes a meal of it,\" which identifies both Corbin Bosch and delivery 10.2. The lower-ranked nodes are irrelevant nodes about his later dismissal or other shots, such as \"Suryakumar Yadav c Linde b Kwena Maphaka 30(16)\" in the second node and \"Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!!\" in the third node, so they are correctly placed below the relevant node. Great ranking.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
-      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
-    },
-    {
-      "metric": "contextual_recall",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
-      "type": "Inline Data",
-      "threshold": 0.5,
-      "score": 1.0,
-      "question_id": "M1Q2",
-      "question": "Who dropped Suryakumar Yadav and on which delivery did it happen?",
-      "expected_output": "Corbin Bosch dropped Suryakumar Yadav on 10.2.",
-      "actual_output": "Suryakumar Yadav was dropped by Bosch on delivery 10.2, which was a length ball on leg.",
-      "retrieval_context": [
-        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
-        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
-        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
-        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
-        "ntact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside off, dips on him but he reaches out and clobbers it over long-on 5.4 F Kwena Maphaka to Ishan Kishan, SIX, huge swipe across the line and the slower ball disappears! Full in the slot, Kishan goes hard and whacks it over midwicket. Brings up fifty off just 23 balls and is walking back to the dugout! Retired out! Surya welcomes him back with a pat on his helmet 5 6 Nortje to Ishan Kishan, SIX, don't think Kishan knew much about that but he'll take it. Has a smile as he walks to Abhishek. Sharp bumper from round the wicket, seemed like a half-hearted pull, almost like he was bailing out of the shot. Flies off the top-edge over fine leg 4.5 4 Nortje to Ishan Kishan, FOUR,"
-      ],
-      "result": "PASS",
-      "reason_for_score": "The score is 1.00 because sentence 1 is fully supported by node 1 in retrieval context, which explicitly states that Suryakumar Yadav was dropped on 10.2 by Bosch. Great match.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
-      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
-    },
-    {
-      "metric": "contextual_relevancy",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
-      "type": "Inline Data",
-      "threshold": 0.5,
-      "score": 1.0,
-      "question_id": "M1Q2",
-      "question": "Who dropped Suryakumar Yadav and on which delivery did it happen?",
-      "expected_output": "Corbin Bosch dropped Suryakumar Yadav on 10.2.",
-      "actual_output": "Suryakumar Yadav was dropped by Bosch on delivery 10.2, which was a length ball on leg.",
-      "retrieval_context": [
-        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
-        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
-        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
-        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
-        "ntact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside off, dips on him but he reaches out and clobbers it over long-on 5.4 F Kwena Maphaka to Ishan Kishan, SIX, huge swipe across the line and the slower ball disappears! Full in the slot, Kishan goes hard and whacks it over midwicket. Brings up fifty off just 23 balls and is walking back to the dugout! Retired out! Surya welcomes him back with a pat on his helmet 5 6 Nortje to Ishan Kishan, SIX, don't think Kishan knew much about that but he'll take it. Has a smile as he walks to Abhishek. Sharp bumper from round the wicket, seemed like a half-hearted pull, almost like he was bailing out of the shot. Flies off the top-edge over fine leg 4.5 4 Nortje to Ishan Kishan, FOUR,"
-      ],
-      "result": "PASS",
-      "reason_for_score": "The retrieval context is highly relevant because it directly mentions the event involving Suryakumar Yadav: '10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped' and specifies that Bosch dropped the catch at deep midwicket. This provides both required details from the question: who dropped him and that it happened on delivery 10.2.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
-      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
-    },
-    {
-      "metric": "contextual_precision",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
-      "type": "Inline Data",
-      "threshold": 0.5,
-      "score": 0.5833333333333333,
-      "question_id": "M1Q3",
+      "question_id": "L2D2",
       "question": "How was Suryakumar Yadav eventually dismissed and who took the catch?",
-      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka.",
+      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka after top-edging a slower ball while trying to shovel it behind square on the on-side.",
       "actual_output": "Suryakumar Yadav was eventually dismissed caught by Linde off the bowling of Kwena Maphaka. He was out after trying to shovel a slower ball behind square on the on-side, resulting in a thick top-edge that led to a simple catch for Linde at deep backward square.",
       "retrieval_context": [
         "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
@@ -172,21 +100,21 @@
         "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje"
       ],
       "result": "PASS",
-      "reason_for_score": "The score is 0.58 because the first node in retrieval contexts is irrelevant \u2014 it only says '10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped!' and 'does not state his eventual dismissal or who took the catch' \u2014 while the second and third nodes in retrieval contexts contain the key answer: 'Suryakumar Yadav c Linde b Kwena Maphaka 30(16)' and 'out Caught by Linde!!' with a 'Simple catch for Linde at deep backward square.' The score is not higher because an irrelevant node is ranked above both relevant nodes, and additional irrelevant nodes appear in the fourth and fifth nodes in retrieval contexts. It is still at this level because the two relevant nodes are ranked near the top, especially in the second and third positions, so the correct dismissal details are retrieved prominently even if not perfectly ordered.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
+      "reason_for_score": "The score is 1.00 because the answer directly addresses how Suryakumar Yadav was dismissed and who took the catch, with no irrelevant information included.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
       "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
+      "evaluation_model": "gpt-4.1-mini"
     },
     {
-      "metric": "contextual_recall",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
+      "metric": "faithfulness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
       "type": "Inline Data",
       "threshold": 0.5,
       "score": 1.0,
-      "question_id": "M1Q3",
+      "question_id": "L2D2",
       "question": "How was Suryakumar Yadav eventually dismissed and who took the catch?",
-      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka.",
+      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka after top-edging a slower ball while trying to shovel it behind square on the on-side.",
       "actual_output": "Suryakumar Yadav was eventually dismissed caught by Linde off the bowling of Kwena Maphaka. He was out after trying to shovel a slower ball behind square on the on-side, resulting in a thick top-edge that led to a simple catch for Linde at deep backward square.",
       "retrieval_context": [
         "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
@@ -196,21 +124,21 @@
         "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje"
       ],
       "result": "PASS",
-      "reason_for_score": "The score is 1.00 because sentence 1 is fully supported by nodes in retrieval context, especially nodes 2 and 3, which state 'Suryakumar Yadav c Linde b Kwena Maphaka' and describe that he was caught by Linde off Kwena Maphaka. Great match.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
+      "reason_for_score": "The score is 1.00 because there are no contradictions; the actual output fully aligns with the retrieval context. Great job maintaining accuracy!",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
       "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
+      "evaluation_model": "gpt-4.1-mini"
     },
     {
-      "metric": "contextual_relevancy",
-      "run_id": "20260318T224707Z_c1217151",
-      "timestamp": "2026-03-18T22:47:58.256783+00:00",
+      "metric": "completeness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
       "type": "Inline Data",
       "threshold": 0.5,
-      "score": 1.0,
-      "question_id": "M1Q3",
+      "score": 0.8999999999999998,
+      "question_id": "L2D2",
       "question": "How was Suryakumar Yadav eventually dismissed and who took the catch?",
-      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka.",
+      "expected_output": "Suryakumar Yadav was caught by Linde off Kwena Maphaka after top-edging a slower ball while trying to shovel it behind square on the on-side.",
       "actual_output": "Suryakumar Yadav was eventually dismissed caught by Linde off the bowling of Kwena Maphaka. He was out after trying to shovel a slower ball behind square on the on-side, resulting in a thick top-edge that led to a simple catch for Linde at deep backward square.",
       "retrieval_context": [
         "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
@@ -220,10 +148,82 @@
         "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje"
       ],
       "result": "PASS",
-      "reason_for_score": "The retrieval context is highly relevant because it directly states Suryakumar Yadav\u2019s dismissal: he was out caught after top-edging a slower ball from Kwena Maphaka while trying to shovel it behind square, and the catch was taken by Linde at deep backward square. This fully answers both parts of the question.",
-      "scenario": "test_evaluate_layer1_contextual_metrics_from_alternate_inline_dataset_table",
+      "reason_for_score": "The response clearly states how Suryakumar Yadav was dismissed (caught after a thick top-edge from a shovel shot) and identifies the catcher as Linde, fully addressing the question. The explanation includes relevant specifics about the dismissal, though it slightly over-attributes the bowler's name which was not asked for, but this does not detract from the completeness.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
       "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
-      "evaluation_model": "gpt-5.4"
+      "evaluation_model": "gpt-4.1-mini"
+    },
+    {
+      "metric": "answer_relevancy",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
+      "type": "Inline Data",
+      "threshold": 0.5,
+      "score": 1.0,
+      "question_id": "L2D3",
+      "question": "Describe the key moments in Suryakumar Yadav\u2019s innings.",
+      "expected_output": "Suryakumar Yadav began with attacking strokes including a first-ball six, was dropped on 10.2 by Bosch while attempting a trademark scoop, scored 30 off 16 with two fours and two sixes, and was eventually caught by Linde off Kwena Maphaka after top-edging a slower ball.",
+      "actual_output": "Suryakumar Yadav's innings featured several key moments:\n\n1. He scored 30 runs off 16 balls, including 2 fours and 2 sixes, but struggled with timing throughout his innings.\n2. He hit a six off Kwena Maphaka, showcasing his ability to capitalize on a good ball (12.2).\n3. He had a lucky moment when he was dropped by a fielder while attempting a scoop shot (10.2).\n4. His innings ended when he was caught by Linde off a slower delivery from Maphaka, marking the end of a scratchy performance (C3).\n\nOverall, while he managed to score quickly, his innings was characterized by inconsistency and a lack of timing.",
+      "retrieval_context": [
+        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
+        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
+        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
+        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
+        "f 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje is travelling the distance! 8.2 6 Nortje to Suryakumar Yadav, SIX, first-ball six from the Indian captain! That trademark pick-up shot of his! Angling away just outside off, good length ball and he effortlessly whips it against the angle over backward square. Looks at his bat after it goes all the way, don't think he got it off the middle 7.4 4 Linde to Tilak Varma, FOUR, fired in on leg, back of a length, Tilak uses the pace and pulls it fine. Maphaka does well with his sliding effort to cut it off. Oh wait, third umpire finds that his foot is in contact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside"
+      ],
+      "result": "PASS",
+      "reason_for_score": "The score is 1.00 because the response fully addresses the request by describing the key moments in Suryakumar Yadav\u2019s innings without including any irrelevant information. It is perfect in relevance and focus.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
+      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
+      "evaluation_model": "gpt-4.1-mini"
+    },
+    {
+      "metric": "faithfulness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
+      "type": "Inline Data",
+      "threshold": 0.5,
+      "score": 0.8888888888888888,
+      "question_id": "L2D3",
+      "question": "Describe the key moments in Suryakumar Yadav\u2019s innings.",
+      "expected_output": "Suryakumar Yadav began with attacking strokes including a first-ball six, was dropped on 10.2 by Bosch while attempting a trademark scoop, scored 30 off 16 with two fours and two sixes, and was eventually caught by Linde off Kwena Maphaka after top-edging a slower ball.",
+      "actual_output": "Suryakumar Yadav's innings featured several key moments:\n\n1. He scored 30 runs off 16 balls, including 2 fours and 2 sixes, but struggled with timing throughout his innings.\n2. He hit a six off Kwena Maphaka, showcasing his ability to capitalize on a good ball (12.2).\n3. He had a lucky moment when he was dropped by a fielder while attempting a scoop shot (10.2).\n4. His innings ended when he was caught by Linde off a slower delivery from Maphaka, marking the end of a scratchy performance (C3).\n\nOverall, while he managed to score quickly, his innings was characterized by inconsistency and a lack of timing.",
+      "retrieval_context": [
+        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
+        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
+        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
+        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
+        "f 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje is travelling the distance! 8.2 6 Nortje to Suryakumar Yadav, SIX, first-ball six from the Indian captain! That trademark pick-up shot of his! Angling away just outside off, good length ball and he effortlessly whips it against the angle over backward square. Looks at his bat after it goes all the way, don't think he got it off the middle 7.4 4 Linde to Tilak Varma, FOUR, fired in on leg, back of a length, Tilak uses the pace and pulls it fine. Maphaka does well with his sliding effort to cut it off. Oh wait, third umpire finds that his foot is in contact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside"
+      ],
+      "result": "PASS",
+      "reason_for_score": "The score is 0.89 because the actual output incorrectly specifies that Suryakumar Yadav was caught off a slower delivery by Kwena Maphaka, whereas the context only mentions he was caught by Linde off Maphaka's bowling without detailing the delivery type.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
+      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
+      "evaluation_model": "gpt-4.1-mini"
+    },
+    {
+      "metric": "completeness",
+      "run_id": "20260319T132314Z_1614e52b",
+      "timestamp": "2026-03-19T13:24:07.815006+00:00",
+      "type": "Inline Data",
+      "threshold": 0.5,
+      "score": 0.9060086650174008,
+      "question_id": "L2D3",
+      "question": "Describe the key moments in Suryakumar Yadav\u2019s innings.",
+      "expected_output": "Suryakumar Yadav began with attacking strokes including a first-ball six, was dropped on 10.2 by Bosch while attempting a trademark scoop, scored 30 off 16 with two fours and two sixes, and was eventually caught by Linde off Kwena Maphaka after top-edging a slower ball.",
+      "actual_output": "Suryakumar Yadav's innings featured several key moments:\n\n1. He scored 30 runs off 16 balls, including 2 fours and 2 sixes, but struggled with timing throughout his innings.\n2. He hit a six off Kwena Maphaka, showcasing his ability to capitalize on a good ball (12.2).\n3. He had a lucky moment when he was dropped by a fielder while attempting a scoop shot (10.2).\n4. His innings ended when he was caught by Linde off a slower delivery from Maphaka, marking the end of a scratchy performance (C3).\n\nOverall, while he managed to score quickly, his innings was characterized by inconsistency and a lack of timing.",
+      "retrieval_context": [
+        "or Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks off with 30 off just 16. Suryakumar Yadav c Linde b Kwena Maphaka 30(16) [4s-2 6s-2] 12.2 6 Kwena Maphaka to Suryakumar Yadav, SIX, the ball is right there for it and he doesn't miss! Back of a length on leg, helps it on its way over fine leg 11.4 6 Linde to Axar, SIX, steps out and whacks it with the turn over midwicket. Don't think he was to the pitch but was able to use his reach nicely 11 W Marco Jansen to Tilak Varma, out Bowled!! Tilak has been bowled behind his legs. He didn't realise it and was running across for the single. The zing bails aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to",
+        "aren't in use today so it took some time for everyone to realise what happened. A yorker from round the wicket, looks to flick it away, misses and it clips leg stump on the way. Tilak Varma b Marco Jansen 45(19) [4s-3 6s-3] 10.5 4 Marco Jansen to Tilak Varma, FOUR, round the wicket, short of length across off, and it's swatted wide of mid-on. Fielder gets a hand diving across but it still runs away 10.2 Marco Jansen to Suryakumar Yadav, 1 run, dropped! Suryakumar having all the luck out there! Length ball on leg, tries his trademark scoop but is through the shot early. Toe-ends it in the air to deep midwicket and Bosch makes a meal of it 10.1 4 Marco Jansen to Suryakumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the",
+        "e past the keeper and through to the fence 14.1 6 Rabada to Rinku Singh, SIX, what a shot! Rinku Singh advances down the track, makes a bit of room for himself and smashes it over wide long-off for a maximum. Trusted the bounce and hit it on the up with aplomb 13.5 4 Markram to Rinku Singh, FOUR, streaky but counts! Rinku Singh uses his feet and Markram spots that and drags his length back. Rinku throws his bat at it and manages to get a thick edge past the keeper 13 W Kwena Maphaka to Suryakumar Yadav, out Caught by Linde!! Runs out of luck! Slower one angling away wide of off, tries shoveling it behind square on the on-side but gets a thick top- edge. Simple catch for Linde at deep backward square and Surya's scratchy knock is over. Just never found his timing. Despite that, he walks",
+        "kumar Yadav, FOUR, another inside edge past the stumps! Good length across off, he looks to loft down the ground but the balance isn't the greatest. Drags it back and gets lucky 10 4 Markram to Tilak Varma, FOUR, flat at the stumps, Tilak makes room and slaps it away through backward point. Races away in the gap! 9.3 4 Markram to Suryakumar Yadav, FOUR, goes for a big swipe across the line and drags it past leg stump off the inside edge! Was full in the slot and he didn't hold himself back 9 6 Nortje to Tilak Varma, SIX, and six more to finish! 49 off two overs for Nortje! Full outside off, in the slot and Tilak needs no second invitation as he launches it over long-off 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje",
+        "f 8.5 6 Nortje to Tilak Varma, SIX, wow, just wow! Advances down to a fast length ball and smokes it over mid-on. Nortje is travelling the distance! 8.2 6 Nortje to Suryakumar Yadav, SIX, first-ball six from the Indian captain! That trademark pick-up shot of his! Angling away just outside off, good length ball and he effortlessly whips it against the angle over backward square. Looks at his bat after it goes all the way, don't think he got it off the middle 7.4 4 Linde to Tilak Varma, FOUR, fired in on leg, back of a length, Tilak uses the pace and pulls it fine. Maphaka does well with his sliding effort to cut it off. Oh wait, third umpire finds that his foot is in contact with the ropes 7.2 6 Linde to Tilak Varma, SIX, gets hold of this one! Absolutely massive! Floated up just outside"
+      ],
+      "result": "PASS",
+      "reason_for_score": "The response addresses all parts of the question by describing multiple key moments in Suryakumar Yadav\u2019s innings, including specific events like scoring details, a six, a dropped catch, and his dismissal. It also summarizes the overall nature of his performance. However, it lacks some contextual details such as the match situation or impact of these moments, which would provide a fuller picture.",
+      "scenario": "test_evaluate_layer2_answer_metrics_from_alternate_inline_dataset_table",
+      "feature": "../.venv/lib/python3.11/site-packages/pytest_bdd/scenario.py",
+      "evaluation_model": "gpt-4.1-mini"
     }
   ]
 }

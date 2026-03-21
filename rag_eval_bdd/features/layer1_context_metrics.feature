@@ -76,10 +76,9 @@ Feature: Layer 1 retrieval quality evaluation
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
     And I use inline dataset:
     """
-    | id   | question                                                                 | expected_answer                                                                                                   | category |
-    | M1Q1 | Which bowler conceded 49 runs in his first two overs?                     | Anrich Nortje conceded 49 runs in his first two overs.                                                             | bowling  |
-    | M1Q2 | Who dropped Suryakumar Yadav and on which delivery did it happen?         | Corbin Bosch dropped Suryakumar Yadav on 10.2.                                                                      | fielding |
-    | M1Q3 | How was Suryakumar Yadav eventually dismissed and who took the catch?     | Suryakumar Yadav was caught by Linde off Kwena Maphaka.                                                             | wickets  |
+    | id   | question                                                                 | expected_answer                                                                 | category |
+    | M1Q2 | On which delivery was Suryakumar Yadav dropped and which fielder missed it? | Suryakumar Yadav was dropped on 10.2 by Corbin Bosch.                            | fielding |
+    | M1Q3 | Who dismissed Suryakumar Yadav and which fielder completed the catch?     | Suryakumar Yadav was dismissed by Kwena Maphaka and caught by Linde.             | wickets  |
     """
     When I evaluate all questions
     Then metric "contextual_precision" should be >= configured threshold

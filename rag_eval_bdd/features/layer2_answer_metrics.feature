@@ -68,3 +68,60 @@ Feature: Layer 2 answer quality evaluation
     And metric "faithfulness" should be >= configured threshold
     And metric "completeness" should be >= configured threshold
     And save results for reporting
+
+  @sanity3
+  Scenario: Evaluate layer2 answer metrics from alternate inline dataset table
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+      """
+    | id   | question                                                                 | expected_answer                                                                                                              | category |
+    | L2Q1 | Which bowler conceded 49 runs in his first two overs?                     | Anrich Nortje conceded 49 runs in his first two overs.                                                                        | bowling  |
+    | L2Q2 | Who dropped Suryakumar Yadav, on which ball, and what shot did he attempt?| Corbin Bosch dropped Suryakumar Yadav on 10.2 when Suryakumar attempted a trademark scoop.                                    | fielding |
+    | L2Q3 | How was Suryakumar Yadav eventually dismissed and who took the catch?     | Suryakumar Yadav was caught by Linde off Kwena Maphaka after getting a top-edge while trying to shovel the ball behind square.| wickets  |
+    | L2Q4 | How did Tilak Varma score his runs during his innings?                    | Tilak Varma played aggressively, hitting multiple fours and sixes including consecutive big shots. | batting  |
+    | L2Q5 | Describe the key moments in Suryakumar Yadav’s innings.                   | Suryakumar Yadav started with attacking shots including a first-ball six, survived a dropped catch on 10.2, and was eventually dismissed after top-edging a slower delivery. | batting  |
+    | L2Q6 | How did Rinku Singh make an impact towards the end of the innings?        | Rinku Singh accelerated late in the innings by hitting boundaries including a six off Rabada after advancing down the track and creating scoring momentum. | batting  |  
+      """
+    When I evaluate all questions
+    Then metric "answer_relevancy" should be >= configured threshold
+    And metric "faithfulness" should be >= configured threshold
+    And metric "completeness" should be >= configured threshold
+    And save results for reporting
+
+   @sanity4
+  Scenario: Evaluate layer2 answer metrics from alternate inline dataset table
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+      """
+    | id   | question                                                                 | expected_answer                                                                                                                                     | category |
+    | L2Q1 | Which bowler conceded 49 runs in his first two overs?                    | Anrich Nortje conceded 49 runs in his first two overs and later dismissed Rinku Singh.                                                            | bowling  |
+    | L2Q2 | Who dropped Suryakumar Yadav, on which ball, and what shot did he attempt? | Corbin Bosch dropped Suryakumar Yadav on 10.2 when Suryakumar attempted a trademark scoop.                                                       | fielding |
+    | L2Q3 | How was Suryakumar Yadav eventually dismissed and who took the catch?    | Suryakumar Yadav was caught by Linde off Kwena Maphaka on 12.2 after top-edging a slower ball while trying to shovel it behind square.          | wickets  |
+    | L2Q4 | How did Tilak Varma score his runs during his innings?                   | Tilak Varma scored 45 off 19 with 4 fours and 3 sixes, including aggressive boundary-hitting, before being bowled by Marco Jansen on 10.5.      | batting  |
+    | L2Q5 | Describe the key moments in Suryakumar Yadav’s innings.                  | Suryakumar Yadav began with a first-ball six, survived a dropped catch by Bosch on 10.2 while attempting a trademark scoop, and was later dismissed for 30 off 16 after top-edging a slower ball to Linde off Kwena Maphaka. | batting  |
+    | L2Q6 | How did Rinku Singh make an impact towards the end of the innings?       | Rinku Singh accelerated late in the innings by hitting boundaries including a six off Rabada after advancing down the track and creating scoring momentum. | batting  |
+      """
+    When I evaluate all questions
+    Then metric "answer_relevancy" should be >= configured threshold
+    And metric "faithfulness" should be >= configured threshold
+    And metric "completeness" should be >= configured threshold
+    And save results for reporting
+
+  @sanity5
+  Scenario: Evaluate layer2 answer metrics from alternate inline dataset table
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I use inline dataset:
+      """
+    | id   | question                                           | expected_answer                                                                                                                                     | category |
+    | L2D1 | Which bowler conceded 49 runs in his first two overs? | Anrich Nortje conceded 49 runs in his first two overs.                                                                                               | bowling  |
+    | L2D2 | How was Suryakumar Yadav eventually dismissed and who took the catch? | Suryakumar Yadav was caught by Linde off Kwena Maphaka after top-edging a slower ball while trying to shovel it behind square on the on-side. | wickets  |
+    | L2D3 | Describe the key moments in Suryakumar Yadav’s innings. | Suryakumar Yadav began with attacking strokes including a first-ball six, was dropped on 10.2 by Bosch while attempting a trademark scoop, scored 30 off 16 with two fours and two sixes, and was eventually caught by Linde off Kwena Maphaka after top-edging a slower ball. | batting  |
+      """
+    When I evaluate all questions
+    Then metric "answer_relevancy" should be >= configured threshold
+    And metric "faithfulness" should be >= configured threshold
+    And metric "completeness" should be >= configured threshold
+    And save results for reporting

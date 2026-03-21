@@ -40,4 +40,4 @@ evaluation:
   disable_context_trimming: true
   metric_question_mapping_mode: "all"
 
-model: "gpt-5.4"
+model: "gpt-4.1-mini"
