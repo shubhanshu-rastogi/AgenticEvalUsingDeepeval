@@ -1,0 +1,83 @@
+[
+  {
+    "id": "DEMO_H1",
+    "question": "How many sixes did Tilak Varma hit?",
+    "expected_answer": "Tilak Varma hit 3 sixes.",
+    "category": "high",
+    "target_score_band": "high",
+    "score_expectation_reason": "Single explicit fact in the source text; low ambiguity and direct retrieval.",
+    "demo_note": "Good for showing strong answer_relevancy and faithfulness."
+  },
+  {
+    "id": "DEMO_H2",
+    "question": "Who dismissed Suryakumar Yadav and who took the catch?",
+    "expected_answer": "Kwena Maphaka dismissed Suryakumar Yadav, and Linde took the catch.",
+    "category": "high",
+    "target_score_band": "high",
+    "score_expectation_reason": "Clear wicket event with named bowler and fielder in the source.",
+    "demo_note": "Usually produces precise and grounded outputs."
+  },
+  {
+    "id": "DEMO_H3",
+    "question": "Which bowler conceded 49 runs in his first two overs and which batter did he dismiss later?",
+    "expected_answer": "Anrich Nortje conceded 49 runs in his first two overs and later dismissed Rinku Singh.",
+    "category": "high",
+    "target_score_band": "high",
+    "score_expectation_reason": "Specific two-part fact repeatedly reflected in commentary context.",
+    "demo_note": "Demonstrates strong retrieval plus complete final answer for a short multi-part question."
+  },
+  {
+    "id": "DEMO_M1",
+    "question": "Describe the sequence from Suryakumar Yadav being dropped to his eventual dismissal.",
+    "expected_answer": "Suryakumar Yadav was dropped by Corbin Bosch on 10.2 while attempting a scoop, and later got out on 12.2 when he top-edged Kwena Maphaka to Linde.",
+    "category": "medium",
+    "target_score_band": "medium",
+    "score_expectation_reason": "Needs temporal sequencing and multiple details; model can be partially correct but miss precision.",
+    "demo_note": "Useful to show moderate completeness when one detail is missed."
+  },
+  {
+    "id": "DEMO_M2",
+    "question": "Create a mini scorecard only for Axar Patel's boundary balls including over.ball, bowler, and exact shot phrase from commentary.",
+    "expected_answer": "Axar boundary balls include 11.4 (Linde, SIX), 14.3 (Rabada, FOUR), 14.4 (Rabada, SIX), and 18.3 (Rabada, FOUR), each with an exact commentary-style shot phrase.",
+    "category": "medium",
+    "target_score_band": "medium",
+    "score_expectation_reason": "Grounded extraction task with high detail/phrasing precision; answers are usually relevant but often miss exact phrasing or one event.",
+    "demo_note": "Shows medium scores from partial precision rather than missing context."
+  },
+  {
+    "id": "DEMO_M3",
+    "question": "List every Axar Patel boundary in strict chronological order with ball number, bowler, shot type, and whether it was FOUR or SIX; also include the immediate non-boundary ball between any two boundaries if present.",
+    "expected_answer": "Axar Patel boundary balls include 11.4 (Linde, SIX), 14.3 (Rabada, FOUR), 14.4 (Rabada, SIX), and 18.3 (Rabada, FOUR). Include shot descriptions and note any immediate non-boundary ball between boundary events when available.",
+    "category": "medium",
+    "target_score_band": "medium",
+    "score_expectation_reason": "Strict formatting plus extra sequencing requirement tends to cause partial answers, lowering completeness or faithfulness without making the answer fully irrelevant.",
+    "demo_note": "Useful to demonstrate medium scoring through partial structural compliance."
+  },
+  {
+    "id": "DEMO_L1",
+    "question": "Extract all events involving deep backward square, including catches and boundaries, with over.ball and players involved.",
+    "expected_answer": "Include deep backward square events such as Suryakumar Yadav's dismissal catch region and boundary hits in that zone, with over.ball plus batter/bowler/fielder names.",
+    "category": "low",
+    "target_score_band": "low",
+    "score_expectation_reason": "Location-filtered multi-event extraction is difficult; answers often mix ordering, miss events, or include unsupported details.",
+    "demo_note": "Grounded but retrieval-hard question to demonstrate low confidence behavior."
+  },
+  {
+    "id": "DEMO_L2",
+    "question": "Provide a complete catch map: every catch chance, actual catch, and dropped chance with over.ball, catcher, batter, shot type, and whether momentum increased or decreased in the next two balls.",
+    "expected_answer": "Catch map should include chances, completed catches, and dropped catches with over.ball plus participants and a short momentum annotation after each event.",
+    "category": "low",
+    "target_score_band": "low",
+    "score_expectation_reason": "Combines factual extraction with follow-up momentum interpretation, which commonly reduces both completeness and faithfulness.",
+    "demo_note": "Useful for showing low scores from over-constrained, still in-context analysis."
+  },
+  {
+    "id": "DEMO_L3",
+    "question": "Create a forensic timeline from 10.0 to 14.6 for Suryakumar Yadav and Axar with every ball outcome, fielding touch, and scoreboard update after each ball.",
+    "expected_answer": "Timeline should enumerate each relevant ball in that window with player events, fielding touches, and running score progression.",
+    "category": "low",
+    "target_score_band": "low",
+    "score_expectation_reason": "Dense sequence reconstruction plus score tracking usually leads to missing/approximate details in generated answers.",
+    "demo_note": "Good low-band example without using out-of-context metadata."
+  }
+]

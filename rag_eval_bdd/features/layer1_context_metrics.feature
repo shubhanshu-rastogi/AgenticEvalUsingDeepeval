@@ -42,6 +42,14 @@ Feature: Layer 1 retrieval quality evaluation
     And metric "contextual_relevancy" should be >= configured threshold
     And save results for reporting
 
+  @contextual_precision @contextual_recall @contextual_relevancy  @score_band_demo
+  Scenario: Run layer1 contextual metrics on demo score-band dataset
+    Given backend is reachable
+    And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
+    And I load dataset "rag_eval_bdd/data/datasets/demo_score_band_questions.json"
+    When I evaluate all questions
+    Then save results for reporting
+
   @live @contextual_precision @contextual_recall @contextual_relevancy
   Scenario: Evaluate layer1 contextual metrics on runtime live dataset
     Given backend is reachable
