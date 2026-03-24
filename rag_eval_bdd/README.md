@@ -50,9 +50,9 @@ Business-friendly and technical RAG evaluation framework built with `pytest-bdd`
 ## Quick start
 
 ```bash
-cd /Users/shubhanshurastogi_1/Learning/rag-session-qa-eval/rag_eval_bdd
+cd rag_eval_bdd
 source ../.venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt -c constraints.txt
 
 export BASE_URL="http://localhost:8000"
 export OPENAI_API_KEY="<your_key>"
@@ -105,6 +105,7 @@ Notes:
 
 - `@smoke`: minimal fast BDD scenarios
 - `@sanity`: fast confidence scenarios
+- `@sanity1` ... `@sanity5`: alternate confidence packs with varied inline datasets
 - `@regression`: broader coverage scenarios
 - `@layer1`: contextual precision/recall/relevancy scope
 - `@layer2`: answer relevancy/faithfulness/completeness scope

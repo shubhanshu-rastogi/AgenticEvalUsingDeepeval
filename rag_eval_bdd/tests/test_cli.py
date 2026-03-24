@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
+
 import pytest
 
 from rag_eval_bdd.cli import (
+    _cmd_run,
     _auto_open_executive_report,
     _normalize_marker_expression,
     _should_auto_open_report,
@@ -74,3 +78,49 @@ def test_auto_open_executive_report_skips_when_disabled(
     monkeypatch.setattr("rag_eval_bdd.cli.webbrowser.open", _fail_if_called)
 
     _auto_open_executive_report(framework_root=tmp_path)
+
+
+def test_cmd_run_does_not_auto_open_report_when_pytest_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("rag_eval_bdd.cli.get_framework_root", lambda: Path("/tmp"))
+    monkeypatch.setattr("rag_eval_bdd.cli._run_pytest", lambda **_kwargs: 5)
+    called = {"opened": False}
+
+    def _mark_opened(*_args, **_kwargs) -> None:
+        called["opened"] = True
+
+    monkeypatch.setattr("rag_eval_bdd.cli._auto_open_executive_report", _mark_opened)
+
+    args = argparse.Namespace(
+        tags="@sanity5",
+        feature=None,
+        config=None,
+        pytest_args=[],
+        suite="live",
+    )
+    exit_code = _cmd_run(args)
+
+    assert exit_code == 5
+    assert called["opened"] is False
+
+
+def test_cmd_run_auto_opens_report_when_pytest_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("rag_eval_bdd.cli.get_framework_root", lambda: Path("/tmp"))
+    monkeypatch.setattr("rag_eval_bdd.cli._run_pytest", lambda **_kwargs: 0)
+    called = {"opened": False}
+
+    def _mark_opened(*_args, **_kwargs) -> None:
+        called["opened"] = True
+
+    monkeypatch.setattr("rag_eval_bdd.cli._auto_open_executive_report", _mark_opened)
+
+    args = argparse.Namespace(
+        tags="@smoke",
+        feature=None,
+        config=None,
+        pytest_args=[],
+        suite="live",
+    )
+    exit_code = _cmd_run(args)
+
+    assert exit_code == 0
+    assert called["opened"] is True

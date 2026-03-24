@@ -13,7 +13,7 @@ venv:
 
 install: venv
 	$(PIP) install --upgrade pip
-	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements.txt -c constraints.txt
 
 test:
 	$(PYTEST) -c pytest.ini steps

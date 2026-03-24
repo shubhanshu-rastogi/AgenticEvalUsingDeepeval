@@ -95,6 +95,10 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     if max_chars is not None:
         config.evaluation.max_retrieval_context_chars_per_chunk = max_chars
 
+    log_context_chars = _parse_int_env("RAG_EVAL_MAX_LOGGED_CONTEXT_CHARS")
+    if log_context_chars is not None:
+        config.evaluation.max_logged_retrieval_context_chars = log_context_chars
+
     truths_limit = _parse_int_env("RAG_EVAL_FAITHFULNESS_TRUTHS_LIMIT")
     if truths_limit is not None:
         config.evaluation.faithfulness_truths_extraction_limit = truths_limit
@@ -111,6 +115,14 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     if cache_asks is not None:
         config.evaluation.cache_ask_responses = cache_asks
 
+    ask_cache_ttl = _parse_int_env("RAG_EVAL_ASK_CACHE_TTL_S")
+    if ask_cache_ttl is not None:
+        config.backend.ask_cache_ttl_s = ask_cache_ttl
+
+    ask_cache_size = _parse_int_env("RAG_EVAL_ASK_CACHE_MAX_ENTRIES")
+    if ask_cache_size is not None:
+        config.backend.ask_cache_max_entries = ask_cache_size
+
     parity_mode = _parse_bool_env("RAG_EVAL_NOTEBOOK_PARITY_MODE")
     if parity_mode is not None:
         config.evaluation.notebook_parity_mode = parity_mode
@@ -122,6 +134,18 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     disable_trim = _parse_bool_env("RAG_EVAL_DISABLE_CONTEXT_TRIMMING")
     if disable_trim is not None:
         config.evaluation.disable_context_trimming = disable_trim
+
+    log_raw_payloads = _parse_bool_env("RAG_EVAL_LOG_RAW_PAYLOADS")
+    if log_raw_payloads is not None:
+        config.evaluation.log_raw_payloads = log_raw_payloads
+
+    log_full_context = _parse_bool_env("RAG_EVAL_LOG_FULL_RETRIEVAL_CONTEXT")
+    if log_full_context is not None:
+        config.evaluation.log_full_retrieval_context = log_full_context
+
+    redact_sensitive_logs = _parse_bool_env("RAG_EVAL_REDACT_SENSITIVE_LOGS")
+    if redact_sensitive_logs is not None:
+        config.evaluation.redact_sensitive_logs = redact_sensitive_logs
 
     mapping_mode = os.getenv("RAG_EVAL_METRIC_QUESTION_MAPPING_MODE")
     if mapping_mode:

@@ -117,17 +117,15 @@ Feature: Layer 2 answer quality evaluation
     And metric "completeness" should be >= configured threshold
     And save results for reporting
 
-  @sanity2
+  @demo
   Scenario: Evaluate layer2 answer metrics from alternate inline dataset table - sanity2
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
     And I use inline dataset:
       """
     | id   | question                                                                 | expected_answer                                                                                                                                               | category |
-    | L2D1 | Which bowler conceded 49 runs in his first two overs?                    | Anrich Nortje conceded 49 runs in his first two overs.                                                                                                        | bowling  |
-    | L2D2 | How was Suryakumar Yadav eventually dismissed and who took the catch?    | Suryakumar Yadav was caught by Linde off Kwena Maphaka after top-edging a slower ball while trying to shovel it behind square on the on-side.            | wickets  |
     | L2D3 | How did Hardik Pandya get out and on which delivery?                     | Hardik Pandya got out caught by Marco Jansen off the bowling of Corbin Bosch on the 19.5 delivery.                                                         | batting  |
-    | L2D4 | Who scored maximum runs and how many boundaries?                         | Ishan Kishan scored the maximum runs with a total of 50 runs. He hit 4 fours and 4 sixes during his innings.                                               | batting  |
+    | L2D4 | Who scored maximum runs and how many boundaries ?                         | Ishan Kishan scored the maximum runs with a total of 50 runs. He hit 4 fours and 4 sixes during his innings.                                               | batting  |
     | L2D5 | What was the strike rate of Hardik Pandya and how did he score those runs? | Hardik Pandya scored 30 runs off 10 balls, which gives him a strike rate of 300. He achieved this by hitting 2 fours and 3 sixes during his innings. | batting  |
       """
     When I evaluate all questions

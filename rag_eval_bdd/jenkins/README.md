@@ -85,11 +85,12 @@ When `EMAIL_RECIPIENTS` is set:
 You get clear stage visualization (good for demos) with these stages:
 
 1. Checkout
-2. Setup Python
-3. Smoke Gate (Deterministic Unit)
-4. Smoke Gate (BDD @smoke)
-5. Publish HTML In Jenkins
-6. Prepare Email Bundle
-7. Email Reports
+2. Validate Workspace
+3. Setup Python
+4. Smoke Gate (Deterministic Unit)
+5. Smoke Gate (BDD @smoke)
+6. Publish HTML In Jenkins
+7. Prepare Email Bundle
+8. Email Reports
 
 For best UI experience, open the job with Blue Ocean or Pipeline Stage View.

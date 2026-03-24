@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from functools import lru_cache
+import json
 import os
 from pathlib import Path
+import re
+from typing import Any
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
@@ -24,6 +28,35 @@ from rag_eval_bdd.synthesize import synthesize_dataset, synthesize_dataset_from_
 
 scenarios("../features/layer1_context_metrics.feature")
 scenarios("../features/layer2_answer_metrics.feature")
+
+_SCENARIO_LINE_RE = re.compile(r"^\s*Scenario(?: Outline)?:\s*(.+?)\s*$")
+
+
+def _scenario_title_to_pytest_name(title: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")
+    return f"test_{normalized}" if normalized else ""
+
+
+@lru_cache(maxsize=8)
+def _feature_scenario_index(features_dir: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    root = Path(features_dir)
+    for feature_file in sorted(root.glob("*.feature")):
+        rel_feature = f"features/{feature_file.name}"
+        for line in feature_file.read_text().splitlines():
+            match = _SCENARIO_LINE_RE.match(line)
+            if not match:
+                continue
+            scenario_name = _scenario_title_to_pytest_name(match.group(1))
+            if scenario_name and scenario_name not in mapping:
+                mapping[scenario_name] = rel_feature
+    return mapping
+
+
+def _resolve_feature_reference(node_name: str, framework_root: Path, fallback: str) -> str:
+    base_name = node_name.split("[", 1)[0]
+    index = _feature_scenario_index(str((framework_root / "features").resolve()))
+    return index.get(base_name, fallback)
 
 
 @given("backend is reachable")
@@ -61,6 +94,7 @@ def _persist_results_for_reporting(scenario_state, results_store, framework_root
         output_path=framework_root / "results" / "reports" / "index.html",
         pass_rate_rule=app_config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=app_config.reporting.trend_status_min_pass_rate,
+        snapshot_keep_last_n=app_config.reporting.executive_snapshot_keep_last_n,
     )
     attach_run_artifacts(scenario_state.run_result, trend_summary, [], trend_html)
 
@@ -127,10 +161,18 @@ def given_use_latest_uploaded_session_from_application_ui(backend_client, scenar
         raise AssertionError("Backend did not provide an active session_id. Upload a file in UI first.")
 
     source_filename = payload.get("source_filename")
+    num_chunks = payload.get("num_chunks")
     scenario_state.session_id = str(session_id)
+    scenario_state.ui_source_filename = str(source_filename) if source_filename else None
+    try:
+        scenario_state.ui_num_chunks = int(num_chunks) if num_chunks is not None else None
+    except Exception:  # noqa: BLE001
+        scenario_state.ui_num_chunks = None
     attach_text("ui_session_id", str(session_id))
     if source_filename:
         attach_text("ui_source_filename", str(source_filename))
+    if scenario_state.ui_num_chunks is not None:
+        attach_text("ui_num_chunks", str(scenario_state.ui_num_chunks))
 
 
 def _live_questions_per_layer() -> int:
@@ -166,13 +208,70 @@ def _is_not_found_answer(text: str | None) -> bool:
     return normalized in {"not found in document.", "not found in the document."}
 
 
-def _load_existing_live_dataset(output_path: Path):
+def _live_dataset_meta_path(output_path: Path) -> Path:
+    return output_path.with_suffix(".meta.json")
+
+
+def _document_fingerprint(document_path: Path) -> dict[str, Any]:
+    stats = document_path.stat()
+    return {
+        "path": str(document_path),
+        "size": int(stats.st_size),
+        "mtime_ns": int(stats.st_mtime_ns),
+    }
+
+
+def _build_live_dataset_fingerprint(
+    *,
+    layer_name: str,
+    question_count: int,
+    generation_target: int,
+    model: str | None,
+    document_path: Path | None,
+    session_id: str | None,
+    ui_source_filename: str | None,
+    ui_num_chunks: int | None,
+    chunk_limit: int | None,
+) -> dict[str, Any]:
+    fingerprint: dict[str, Any] = {
+        "layer": layer_name,
+        "question_count": int(question_count),
+        "generation_target": int(generation_target),
+        "model": model or "",
+        "session_id": str(session_id or ""),
+        "ui_source_filename": str(ui_source_filename or ""),
+        "ui_num_chunks": int(ui_num_chunks) if ui_num_chunks is not None else None,
+        "chunk_limit": int(chunk_limit) if chunk_limit is not None else None,
+    }
+    if document_path is not None and document_path.exists():
+        fingerprint["document"] = _document_fingerprint(document_path)
+    else:
+        fingerprint["document"] = None
+    return fingerprint
+
+
+def _load_existing_live_dataset(output_path: Path, expected_fingerprint: dict[str, Any]):
     if not output_path.exists():
+        return []
+    meta_path = _live_dataset_meta_path(output_path)
+    if not meta_path.exists():
+        return []
+    try:
+        stored_fingerprint = json.loads(meta_path.read_text())
+    except Exception:  # noqa: BLE001
+        return []
+    if stored_fingerprint != expected_fingerprint:
         return []
     try:
         return load_dataset_file(output_path)
     except Exception:  # noqa: BLE001
         return []
+
+
+def _write_live_dataset_meta(output_path: Path, fingerprint: dict[str, Any]) -> None:
+    meta_path = _live_dataset_meta_path(output_path)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps(fingerprint, indent=2))
 
 
 @given(parsers.parse('I generate live dataset for layer "{layer_name}" from uploaded documents'))
@@ -195,19 +294,42 @@ def given_generate_live_dataset_for_layer(
 
     question_count = _live_questions_per_layer()
     generation_target = max(question_count, question_count * 3)
+    chunk_limit = _live_context_chunk_limit() if scenario_state.session_id and not scenario_state.uploaded_documents else None
+    active_document_path = (
+        Path(scenario_state.uploaded_documents[-1]).resolve()
+        if scenario_state.uploaded_documents
+        else None
+    )
+    dataset_fingerprint = _build_live_dataset_fingerprint(
+        layer_name=normalized_layer,
+        question_count=question_count,
+        generation_target=generation_target,
+        model=app_config.model,
+        document_path=active_document_path,
+        session_id=scenario_state.session_id,
+        ui_source_filename=scenario_state.ui_source_filename,
+        ui_num_chunks=scenario_state.ui_num_chunks,
+        chunk_limit=chunk_limit,
+    )
     output_path = framework_root / "data" / "generated" / f"{normalized_layer}_live_questions.json"
-    existing_rows = _load_existing_live_dataset(output_path)
+    existing_rows = _load_existing_live_dataset(output_path, expected_fingerprint=dataset_fingerprint)
     reused_existing_dataset = len(existing_rows) > 0
     rows = existing_rows
     source_reference = (
         str(Path(scenario_state.uploaded_documents[-1]).resolve())
         if scenario_state.uploaded_documents
-        else f"session:{scenario_state.session_id}"
+        else (
+            f"session:{scenario_state.session_id}:{scenario_state.ui_source_filename}"
+            if scenario_state.ui_source_filename
+            else f"session:{scenario_state.session_id}"
+        )
     )
 
     if not reused_existing_dataset:
         if scenario_state.uploaded_documents:
-            document_path = Path(scenario_state.uploaded_documents[-1]).resolve()
+            document_path = active_document_path
+            if document_path is None:
+                raise AssertionError("Uploaded document path was expected but unavailable.")
             rows = synthesize_dataset(
                 input_path=document_path,
                 output_path=output_path,
@@ -216,14 +338,19 @@ def given_generate_live_dataset_for_layer(
             )
             source_reference = str(document_path)
         else:
-            chunk_limit = _live_context_chunk_limit()
+            if chunk_limit is None:
+                chunk_limit = _live_context_chunk_limit()
             chunks = backend_client.get_session_chunks(limit=chunk_limit)
             contexts = [str(chunk.get("text", "")).strip() for chunk in chunks if str(chunk.get("text", "")).strip()]
             if not contexts:
                 raise AssertionError(
                     "No retrieval chunks found for active UI session. Upload a document in UI and try again."
                 )
-            source_reference = f"session:{scenario_state.session_id}"
+            source_reference = (
+                f"session:{scenario_state.session_id}:{scenario_state.ui_source_filename}"
+                if scenario_state.ui_source_filename
+                else f"session:{scenario_state.session_id}"
+            )
             rows = synthesize_dataset_from_contexts(
                 contexts=contexts,
                 output_path=output_path,
@@ -236,6 +363,7 @@ def given_generate_live_dataset_for_layer(
             raise AssertionError(
                 f"Synthesizer generated only {len(rows)} rows, expected at least {generation_target}."
             )
+        _write_live_dataset_meta(output_path=output_path, fingerprint=dataset_fingerprint)
 
     answerable_rows = []
     if scenario_state.session_id:
@@ -309,12 +437,18 @@ def when_evaluate_all_questions(request, scenario_state, evaluation_runner, resu
     if not selected_metrics:
         raise AssertionError("No metrics selected from tags/parameters.")
 
+    feature_reference = _resolve_feature_reference(
+        node_name=request.node.name,
+        framework_root=framework_root,
+        fallback=str(request.node.location[0]),
+    )
+
     scenario_state.selected_metrics = selected_metrics
     scenario_state.run_result = evaluation_runner.evaluate_dataset(
         dataset_rows=scenario_state.dataset_rows,
         selected_metrics=selected_metrics,
         session_id=scenario_state.session_id,
-        feature=str(request.node.location[0]),
+        feature=feature_reference,
         scenario=request.node.name,
         tags=tags,
         uploaded_documents=scenario_state.uploaded_documents,

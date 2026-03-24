@@ -1,56 +1,56 @@
 [
   {
     "id": "GEN_1",
-    "question": "Who is the house-elf Dobby, and what specific warning does he deliver to Harry Potter?",
-    "expected_answer": "Dobby is a house-elf who appears on Harry Potter's birthday to warn him not to return to Hogwarts, insisting that danger awaits him there.",
+    "question": "Compare Harry Potter and the Prisoner of Azkaban with Goblet of Fire in release order.",
+    "expected_answer": "*Harry Potter and the Prisoner of Azkaban* was released before *Harry Potter and the Goblet of Fire*. According to the context, *Prisoner of Azkaban* was released on July 8, 1999 (UK) and September 8, 1999 (US), and it is followed by *Harry Potter and the Goblet of Fire* in the series.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_2",
-    "question": "Why is Harry Potter eager to return to Hogwarts despite Dursleys’ harsh treatment and Dobby’s warnings?",
-    "expected_answer": "Harry Potter is eager to return to Hogwarts because it offers him a sense of belonging and escape from the harsh treatment by the Dursleys. Despite Dobby’s warnings, Hogwarts represents a place where he feels valued and excited for new experiences.",
+    "question": "Compare the books preceding and following Harry Potter and the Prisoner of Azkaban.",
+    "expected_answer": "The book preceding *Harry Potter and the Prisoner of Azkaban* is *Harry Potter and the Chamber of Secrets*, and the one following it is *Harry Potter and the Goblet of Fire*.\n\n- **Preceding book:** *Harry Potter and the Chamber of Secrets*\n- **Following book:** *Harry Potter and the Goblet of Fire*\n\nAccording to the context, *The Prisoner of Azkaban* was released on **July 8, 1999 (UK)** and **September 8, 1999 (US)**.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_3",
-    "question": "How does Sirius’s innocence and godfather role affect Harry amid Ministry pursuit and Lupin’s resignation?",
-    "expected_answer": "Sirius’s innocence and role as Harry’s godfather give Harry hope and emotional support despite the Ministry’s pursuit and Lupin’s resignation. Although Sirius must remain on the run, Harry feels comforted knowing he has a true family connection and protector outside the Dursleys.",
+    "question": "How do Umbridge’s reprisals and Harry’s OWLs, Cho crush, and scar dreams lead to D.A.?",
+    "expected_answer": "Umbridge keeps punishing Harry by taking away what he cares about—Quidditch, Sirius’s letters, and visits with Hagrid—while tightening control over the school. At the same time, Harry is overwhelmed by OWL preparation, distracted by his crush on Cho Chang, and troubled by recurring scar dreams. With all this pressure and no proper defense teaching, he pushes back in the one way he can: he forms Dumbledore’s Army to teach his friends how to defend themselves properly.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_4",
-    "question": "Examine Sirius Black’s wrongful conviction and its implications on wizarding justice reform.",
-    "expected_answer": "Sirius Black’s wrongful conviction highlights significant flaws in the wizarding justice system, including reliance on incomplete evidence and lack of thorough investigation. His case underscores the need for reforms to prevent miscarriages of justice, ensure fair trials, and protect the rights of the accused, especially given the severe consequences like imprisonment in Azkaban without proper proof.",
+    "question": "If Umbridge tightened control further, which 3 things would she strip from Harry?",
+    "expected_answer": "She would strip away the things Harry cares about: **Quidditch, letters from Sirius, and visits with Hagrid**.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_5",
-    "question": "How does Harry overcome the mer-people lake challenge to tie for first in task two?",
-    "expected_answer": "Harry nearly fails to complete the second task of retrieving something from the bottom of the lake filled with mer-people but is saved at the last minute, allowing him to earn almost full marks and tie for first place.",
+    "question": "If Sirius could stop hiding, what family role would he openly claim in Harry's life?",
+    "expected_answer": "He would openly claim his role as Harry’s godfather. The context says Harry learns Sirius is his godfather and hopes he might even live with him if Sirius didn’t have to stay on the run.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_6",
-    "question": "How do Harry’s and Cedric’s actions and challenges during the final task compare, leading to their joint victory?",
-    "expected_answer": "During the final task, both Harry and Cedric face the challenge of navigating a complex knot garden maze to find the Winner’s Cup. Cedric gets caught by the maze’s plants, but Harry helps him escape. Their cooperation and mutual support lead them to decide on a joint victory, symbolized by both placing their hands on the Cup together.",
+    "question": "Why does Prof. Lupin resign after his werewolf identity is revealed?",
+    "expected_answer": "Professor Lupin resigns because his identity as a werewolf is discovered. After he nearly attacks the children, he steps down from his post.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   }
 ]

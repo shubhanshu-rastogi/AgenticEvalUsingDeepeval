@@ -5,9 +5,9 @@ Operational runbook for testers and demo users.
 ## 1) Setup
 
 ```bash
-cd /Users/shubhanshurastogi_1/Learning/rag-session-qa-eval/rag_eval_bdd
+cd rag_eval_bdd
 source ../.venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt -c constraints.txt
 
 export BASE_URL="http://localhost:8000"
 export OPENAI_API_KEY="<your_key>"
@@ -53,6 +53,7 @@ You can combine tags using `and`, `or`, `not`.
 
 - `@smoke`: minimal fast BDD checks
 - `@sanity`: confidence checks
+- `@sanity1` ... `@sanity5`: alternate confidence checks using additional inline datasets
 - `@regression`: broader checks
 - `@layer1`: retrieval/context metrics
 - `@layer2`: answer metrics

@@ -22,7 +22,7 @@ object RagEvalBdd : BuildType({
                 python3 -m venv .venv-ci
                 . .venv-ci/bin/activate
                 pip install --upgrade pip
-                pip install -r requirements.txt
+                pip install -r requirements.txt -c constraints.txt
             """.trimIndent()
         }
 

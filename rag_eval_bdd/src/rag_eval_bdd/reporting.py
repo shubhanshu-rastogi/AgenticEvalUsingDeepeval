@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable, List
 
 from rag_eval_bdd.models import RunResult, TrendSummary
+from rag_eval_bdd.report_status import clamp_score, format_timestamp, status_with_class
 
 RUN_CLUSTER_MAX_GAP_MINUTES = 5
 
@@ -70,53 +71,7 @@ def generate_trend_charts(trend_summary: TrendSummary, output_dir: Path) -> List
 
 
 def _short_timestamp(timestamp: str) -> str:
-    try:
-        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        return dt.strftime("%m-%d %H:%M")
-    except Exception:  # noqa: BLE001
-        return timestamp
-
-
-def _safe_score(value: float | None) -> float:
-    if value is None:
-        return 0.0
-    return max(0.0, min(1.0, float(value)))
-
-
-def _required_pass_rate(
-    threshold: float | None,
-    pass_rate_rule: str,
-    min_pass_rate: float,
-) -> float | None:
-    if pass_rate_rule == "none":
-        return None
-    if pass_rate_rule == "threshold_based":
-        if threshold is None:
-            return None
-        return _safe_score(threshold) * 100.0
-    return max(0.0, min(100.0, float(min_pass_rate)))
-
-
-def _status(
-    avg_score: float | None,
-    threshold: float | None,
-    pass_rate: float | None = None,
-    pass_rate_rule: str = "min_pass_rate",
-    min_pass_rate: float = 100.0,
-) -> tuple[str, str]:
-    if avg_score is None or threshold is None:
-        return "N/A", "status-na"
-    if avg_score < threshold:
-        return "FAIL", "status-fail"
-
-    required_pass_rate = _required_pass_rate(
-        threshold=threshold,
-        pass_rate_rule=pass_rate_rule,
-        min_pass_rate=min_pass_rate,
-    )
-    if required_pass_rate is not None and pass_rate is not None and pass_rate < required_pass_rate:
-        return "FAIL", "status-fail"
-    return "PASS", "status-pass"
+    return format_timestamp(timestamp, "%m-%d %H:%M")
 
 
 def _format_delta(delta: float | None) -> str:
@@ -179,9 +134,9 @@ def _build_metric_svg(
     def y_pos(v: float) -> float:
         return top + (1.0 - v) * plot_h
 
-    avg_values = [_safe_score(p.avg_score) for p in points]
-    pass_values = [_safe_score((p.pass_rate or 0.0) / 100.0) for p in points]
-    threshold = _safe_score(points[-1].threshold)
+    avg_values = [clamp_score(p.avg_score) for p in points]
+    pass_values = [clamp_score((p.pass_rate or 0.0) / 100.0) for p in points]
+    threshold = clamp_score(points[-1].threshold)
 
     avg_points = [(x_pos(i), y_pos(v)) for i, v in enumerate(avg_values)]
     pass_points = [(x_pos(i), y_pos(v)) for i, v in enumerate(pass_values)]
@@ -206,7 +161,7 @@ def _build_metric_svg(
     for i, point in enumerate(points):
         score = point.avg_score
         threshold_value = point.threshold if point.threshold is not None else threshold
-        _, klass = _status(
+        _, klass = status_with_class(
             score,
             threshold_value,
             pass_rate=point.pass_rate,
@@ -251,7 +206,7 @@ def _derive_shared_threshold(trend_summary: TrendSummary) -> float:
         latest_threshold = metric.points[-1].threshold
         if latest_threshold is None:
             continue
-        rounded_thresholds.append(round(_safe_score(latest_threshold), 2))
+        rounded_thresholds.append(round(clamp_score(latest_threshold), 2))
 
     if not rounded_thresholds:
         return 0.70
@@ -425,7 +380,7 @@ def _build_combined_trend_card(
             if point is None or point.avg_score is None:
                 continue
             x = x_pos(run_idx)
-            y = y_pos(_safe_score(point.avg_score))
+            y = y_pos(clamp_score(point.avg_score))
             coordinates.append((x, y))
             points_for_status.append((point, x, y))
 
@@ -437,7 +392,7 @@ def _build_combined_trend_card(
             f"<path d='{_svg_line_path(coordinates)}' class='combined-line smooth-line' style='stroke: {color};'></path>"
         )
         for point, x, y in points_for_status:
-            _, status_class = _status(
+            _, status_class = status_with_class(
                 point.avg_score,
                 shared_threshold,
                 pass_rate=point.pass_rate,
@@ -519,7 +474,7 @@ def write_trend_html(
         latest_score = latest.avg_score
         latest_threshold = latest.threshold
         latest_pass_rate = latest.pass_rate
-        status_text, status_class = _status(
+        status_text, status_class = status_with_class(
             latest_score,
             latest_threshold,
             pass_rate=latest_pass_rate,
@@ -545,7 +500,7 @@ def write_trend_html(
         for point in points:
             score = point.avg_score
             threshold = point.threshold
-            row_status, row_class = _status(
+            row_status, row_class = status_with_class(
                 score,
                 threshold,
                 pass_rate=point.pass_rate,

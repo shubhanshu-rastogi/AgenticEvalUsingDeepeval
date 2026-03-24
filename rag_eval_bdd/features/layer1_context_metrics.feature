@@ -78,7 +78,7 @@ Feature: Layer 1 retrieval quality evaluation
     Then save results for reporting
 
 
-  @sanity2
+  @demo
   Scenario: Evaluate layer1 contextual metrics from alternate inline dataset table
     Given backend is reachable
     And documents are uploaded from "eval/sample_docs/Match_Summary.pdf"
@@ -87,6 +87,7 @@ Feature: Layer 1 retrieval quality evaluation
     | id   | question                                                                 | expected_answer                                                                 | category |
     | M1Q2 | On which delivery was Suryakumar Yadav dropped and which fielder missed it? | Suryakumar Yadav was dropped on 10.2 by Corbin Bosch.                            | fielding |
     | M1Q3 | Who dismissed Suryakumar Yadav and which fielder completed the catch?     | Suryakumar Yadav was dismissed by Kwena Maphaka and caught by Linde.             | wickets  |
+    | L1Q3 | Which bowler conceded 49 runs in two overs and what key events happened during that spell? | Nortje conceded 49 runs in his first two overs and later dismissed Rinku Singh, caught by Stubbs. | bowling |
     """
     When I evaluate all questions
     Then metric "contextual_precision" should be >= configured threshold

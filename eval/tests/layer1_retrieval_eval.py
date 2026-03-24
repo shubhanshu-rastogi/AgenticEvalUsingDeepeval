@@ -46,7 +46,7 @@ def evaluate_layer1(question: str, retrieval_context: list[str], publish: bool =
                 name="Context Relevance",
                 criteria=(
                     "Evaluate how relevant the retrieval context is to the question. "
-                    "Score 0 to 1 where 1 means all context is relevant and on-topic."
+                    "Assign an integer score from 0 to 10 where 10 means all context is relevant and on-topic."
                 ),
             )
         )

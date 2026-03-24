@@ -118,7 +118,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
         pytest_args=args.pytest_args,
         suite=args.suite,
     )
-    _auto_open_executive_report(framework_root=framework_root)
+    if exit_code == 0:
+        _auto_open_executive_report(framework_root=framework_root)
     return exit_code
 
 
@@ -150,6 +151,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
         output_path=framework_root / "results" / "reports" / "index.html",
         pass_rate_rule=config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=config.reporting.trend_status_min_pass_rate,
+        snapshot_keep_last_n=config.reporting.executive_snapshot_keep_last_n,
     )
     print(f"Executive report: {executive_path}")
     print(f"Trend dashboard: {trend_path}")

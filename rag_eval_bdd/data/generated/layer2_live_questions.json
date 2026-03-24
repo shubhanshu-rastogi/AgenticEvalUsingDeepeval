@@ -1,56 +1,56 @@
 [
   {
     "id": "GEN_1",
-    "question": "Analyze Umbridge’s methods of control and their impact on Harry’s actions and school dynamics.",
-    "expected_answer": "Umbridge exerts control through authoritarian measures like sacking teachers and restricting Harry’s activities (Quidditch, letters, visits), creating a repressive school environment. This oppression prompts Harry to resist by forming Dumbledore’s Army, fostering secret defiance and unity among students despite academic pressures and personal challenges.",
+    "question": "Who wrote Harry Potter and the Goblet of Fire, and when was it released?",
+    "expected_answer": "*Harry Potter and the Goblet of Fire* was written by **J. K. Rowling** and released on **July 8, 2000**.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_2",
-    "question": "How does Umbridge’s control and Harry’s personal struggles prompt forming Dumbledore’s Army?",
-    "expected_answer": "Umbridge’s oppressive control, including punishing Harry by banning Quidditch and visits from friends, combined with Harry’s personal struggles like distracting dreams and his crush on Cho Chang, motivate him to form Dumbledore’s Army to secretly teach his friends how to defend themselves.",
+    "question": "Where are Harry and Cedric transported by the Triwizard Cup, and what follows there?",
+    "expected_answer": "Harry and Cedric are transported to a graveyard by the Triwizard Cup. There, Cedric is killed by Wormtail, and Harry witnesses Voldemort’s return to power before barely escaping back to Hogwarts with Cedric’s body.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_3",
-    "question": "Who rescues Harry during the school year’s climax and what honor do they receive?",
-    "expected_answer": "Dumbledore rescues Harry during the school year’s climax. Harry, Ron, and Hermione are honored for their service to the school.",
+    "question": "Before Dobby’s warning and Ron/Fred/George’s flying-car rescue, where is Harry spending summer?",
+    "expected_answer": "Before Dobby appears and before Ron, Fred, and George rescue him, Harry is spending the summer at the Dursleys’ house.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_4",
-    "question": "How are Harry, Ron, and Hermione recognized by Dumbledore at the school year's end?",
-    "expected_answer": "Harry, Ron, and Hermione are honored by Dumbledore for their service to the school at the end of the year.",
+    "question": "After Dobby’s warning, which Weasleys rescue Harry from the Dursleys in a flying car?",
+    "expected_answer": "Ron Weasley and his brothers Fred and George rescue Harry from the Dursleys in a flying car.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_5",
-    "question": "Who authored the UK-published Harry Potter book featuring Voldemort’s graveyard return?",
-    "expected_answer": "The UK-published Harry Potter book featuring Voldemort’s return in the graveyard is authored by J. K. Rowling.",
+    "question": "Who is Scabbers revealed to be, and how does he differ from Sirius Black?",
+    "expected_answer": "Scabbers is revealed to be Peter Pettigrew, a wizard disguised as Ron’s rat. Unlike Sirius Black, who was wrongly believed to be a mass murderer and Voldemort supporter, Peter was the one who actually betrayed Harry’s parents to Voldemort and was hiding to spy on Harry and his friends.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   },
   {
     "id": "GEN_6",
-    "question": "How do Harry and Cedric’s decisions as joint champions compare to the consequences they face afterward?",
-    "expected_answer": "Harry and Cedric decide to be joint winners by both touching the winner’s cup, but this leads to them being transported to a graveyard where Cedric is killed by Wormtail. Harry witnesses Voldemort’s return and narrowly escapes back to Hogwarts, facing traumatic consequences despite their initial cooperation.",
+    "question": "If Peter’s disguise as Scabbers is exposed, who did Harry realize betrayed his parents?",
+    "expected_answer": "Harry realizes that Peter Pettigrew, not Sirius Black, betrayed his parents to Voldemort.",
     "dataset_file": null,
     "category": null,
-    "source_reference": "session:c0f99ec2-c643-4c3d-b76d-c91d27d15e83",
+    "source_reference": "session:9703ea79-8cb9-4199-9bd0-fea991b48eeb:HARRY-POTTER-SUMMARY.pdf",
     "additional_metadata": {}
   }
 ]

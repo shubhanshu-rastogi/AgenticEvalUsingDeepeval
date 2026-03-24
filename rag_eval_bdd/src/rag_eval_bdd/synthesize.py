@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import inspect
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,53 @@ from rag_eval_bdd.models import DatasetRow
 
 
 SUPPORTED_DOC_EXTS = {".pdf", ".txt", ".md", ".docx"}
+
+
+def _prepare_synthesizer_for_runtime(synthesizer: Any) -> None:
+    # DeepEval can return `cost=None` for some model calls; if synthesis_cost is numeric,
+    # DeepEval may crash while doing `self.synthesis_cost += cost`.
+    # We do not consume synthesis cost anywhere in this framework, so disable that tracking.
+    if hasattr(synthesizer, "synthesis_cost"):
+        try:
+            setattr(synthesizer, "synthesis_cost", None)
+        except Exception:  # noqa: BLE001
+            # Best-effort safeguard; if assignment is blocked, continue with default behavior.
+            pass
+
+    model = getattr(synthesizer, "model", None)
+    if model is None:
+        return
+
+    def _normalize_cost_payload(payload: Any) -> Any:
+        if isinstance(payload, tuple) and len(payload) == 2:
+            result, cost = payload
+            if cost is None:
+                return result, 0.0
+        return payload
+
+    for method_name in ("generate", "a_generate"):
+        original = getattr(model, method_name, None)
+        if not callable(original):
+            continue
+        if getattr(original, "__rag_eval_cost_guard__", False):
+            continue
+
+        if inspect.iscoroutinefunction(original):
+
+            async def _async_wrapper(*args, __orig=original, **kwargs):
+                payload = await __orig(*args, **kwargs)
+                return _normalize_cost_payload(payload)
+
+            setattr(_async_wrapper, "__rag_eval_cost_guard__", True)
+            setattr(model, method_name, _async_wrapper)
+        else:
+
+            def _sync_wrapper(*args, __orig=original, **kwargs):
+                payload = __orig(*args, **kwargs)
+                return _normalize_cost_payload(payload)
+
+            setattr(_sync_wrapper, "__rag_eval_cost_guard__", True)
+            setattr(model, method_name, _sync_wrapper)
 
 
 def _read_json_or_csv_records(path: Path) -> List[Dict[str, Any]]:
@@ -101,6 +149,7 @@ def synthesize_dataset_from_contexts(
         raise ValueError("No non-empty contexts were provided to synthesize questions.")
 
     synthesizer = Synthesizer(model=model)
+    _prepare_synthesizer_for_runtime(synthesizer)
     context_blocks = [[ctx] for ctx in clean_contexts]
     goldens = synthesizer.generate_goldens_from_contexts(
         contexts=context_blocks,
@@ -127,6 +176,7 @@ def synthesize_dataset(
         raise RuntimeError("DeepEval Synthesizer is not available in this environment") from exc
 
     synthesizer = Synthesizer(model=model)
+    _prepare_synthesizer_for_runtime(synthesizer)
 
     if input_path.is_dir() or input_path.suffix.lower() in SUPPORTED_DOC_EXTS:
         docs = _collect_documents(input_path)

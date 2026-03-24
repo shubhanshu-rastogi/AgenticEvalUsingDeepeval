@@ -7,6 +7,8 @@ backend:
   timeout_s: 45
   retries: 1
   backoff_s: 1.0
+  ask_cache_max_entries: 512
+  ask_cache_ttl_s: 1800
 
 thresholds:
   contextual_precision: 0.50
@@ -18,6 +20,7 @@ thresholds:
 
 reporting:
   keep_last_n_runs: 5
+  executive_snapshot_keep_last_n: 5
   enable_trend_charts: true
   trend_status_pass_rate_rule: "min_pass_rate"
   trend_status_min_pass_rate: 100.0
@@ -39,5 +42,9 @@ evaluation:
   fresh_session_per_question: false
   disable_context_trimming: true
   metric_question_mapping_mode: "all"
+  log_raw_payloads: false
+  log_full_retrieval_context: false
+  max_logged_retrieval_context_chars: 700
+  redact_sensitive_logs: true
 
-model: "gpt-4.1-mini"
+model: "gpt-5.4"

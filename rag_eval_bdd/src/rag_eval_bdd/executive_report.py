@@ -7,54 +7,14 @@ import json
 import re
 from pathlib import Path
 import shutil
-from typing import Dict, Iterable, List
+from typing import Any, Dict, Iterable, List
 
 from rag_eval_bdd.models import RunResult, TrendSummary
+from rag_eval_bdd.report_status import format_timestamp
 
 
 def _short_timestamp(timestamp: str) -> str:
-    try:
-        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        return dt.strftime("%Y-%m-%d %H:%M")
-    except Exception:  # noqa: BLE001
-        return timestamp
-
-
-def _safe_score(value: float | None) -> float:
-    if value is None:
-        return 0.0
-    return max(0.0, min(1.0, float(value)))
-
-
-def _required_pass_rate(threshold: float | None, pass_rate_rule: str, min_pass_rate: float) -> float | None:
-    if pass_rate_rule == "none":
-        return None
-    if pass_rate_rule == "threshold_based":
-        if threshold is None:
-            return None
-        return _safe_score(threshold) * 100.0
-    return max(0.0, min(100.0, float(min_pass_rate)))
-
-
-def _status(
-    avg_score: float | None,
-    threshold: float | None,
-    pass_rate: float | None = None,
-    pass_rate_rule: str = "min_pass_rate",
-    min_pass_rate: float = 100.0,
-) -> str:
-    if avg_score is None or threshold is None:
-        return "N/A"
-    if avg_score < threshold:
-        return "FAIL"
-    required_pass_rate = _required_pass_rate(
-        threshold=threshold,
-        pass_rate_rule=pass_rate_rule,
-        min_pass_rate=min_pass_rate,
-    )
-    if required_pass_rate is not None and pass_rate is not None and pass_rate < required_pass_rate:
-        return "FAIL"
-    return "PASS"
+    return format_timestamp(timestamp, "%Y-%m-%d %H:%M")
 
 
 def _row_status(score: float | None, threshold: float | None, passed: bool | None) -> str:
@@ -357,31 +317,9 @@ def _snapshot_executive_report(
         stale_snapshot.unlink(missing_ok=True)
 
 
-def write_executive_html(
-    run_results: List[RunResult],
-    trend_summary: TrendSummary,
-    output_path: Path,
-    pass_rate_rule: str = "min_pass_rate",
-    min_pass_rate: float = 100.0,
-) -> Path:
-    rows = _collect_rows(run_results)
-    summary = _summary_cards(rows)
-    generated_at = _short_timestamp(trend_summary.generated_at)
-    unique_runs = len({row["run_id"] for row in rows})
-    metric_names = sorted({row["metric_label"] for row in rows})
-    source_types = sorted({row["type"] for row in rows})
-    metric_options = "".join(
-        f"<option value='{html.escape(name)}'>{html.escape(name)}</option>"
-        for name in metric_names
-    )
-    source_options = "".join(
-        f"<option value='{html.escape(name)}'>{html.escape(name)}</option>"
-        for name in source_types
-    )
-
-    log_json_path = output_path.parent / "technical_logs.json"
-    logs_payload = {
-        "generated_at": trend_summary.generated_at,
+def _build_logs_payload(run_results: List[RunResult], rows: list[dict], generated_at: str) -> dict[str, Any]:
+    return {
+        "generated_at": generated_at,
         "run_files": [
             {
                 "run_id": run.run_id,
@@ -413,18 +351,19 @@ def write_executive_html(
             for row in rows
         ],
     }
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    log_json_path.write_text(json.dumps(logs_payload, indent=2))
+
+
+def _build_context_payload_json(rows: list[dict]) -> str:
     context_payload = {
         row["row_id"]: row["retrieval_context"]
         for row in rows
     }
-    context_payload_json = json.dumps(context_payload).replace("</", "<\\/")
+    return json.dumps(context_payload).replace("</", "<\\/")
 
-    table_rows = []
-    run_log_panels = []
-    for run in run_results:
-        run_log_panels.append(
+
+def _build_run_log_panels(run_results: List[RunResult]) -> list[str]:
+    return [
+        (
             "<details class='run-log'>"
             f"<summary>{html.escape(run.run_id)} · {html.escape(_short_timestamp(run.timestamp))} · "
             f"{html.escape(_infer_data_source(run.scenario))}</summary>"
@@ -432,7 +371,12 @@ def write_executive_html(
             f"title='Run log {html.escape(run.run_id)}'></iframe>"
             "</details>"
         )
+        for run in run_results
+    ]
 
+
+def _build_table_rows(rows: list[dict]) -> list[str]:
+    rendered: list[str] = []
     for row in rows:
         status_class = _badge_class(row["status"])
         reason = row["reason"] or "N/A"
@@ -447,7 +391,7 @@ def write_executive_html(
             f"{context_count} chunk{'s' if context_count != 1 else ''} · View</button>"
             f"<div class='context-preview' title='{html.escape(context_preview_text)}'>{html.escape(context_preview_text)}</div>"
         ) if context_chunks else "<span class='context-empty'>N/A</span>"
-        table_rows.append(
+        rendered.append(
             "<tr "
             f"data-metric='{html.escape(row['metric_label'])}' "
             f"data-type='{html.escape(row['type'])}' "
@@ -468,6 +412,39 @@ def write_executive_html(
             f"<td><a class='tech-link' href='#technical-logs'>View Log</a></td>"
             "</tr>"
         )
+    return rendered
+
+
+def write_executive_html(
+    run_results: List[RunResult],
+    trend_summary: TrendSummary,
+    output_path: Path,
+    pass_rate_rule: str = "min_pass_rate",
+    min_pass_rate: float = 100.0,
+    snapshot_keep_last_n: int = 5,
+) -> Path:
+    rows = _collect_rows(run_results)
+    summary = _summary_cards(rows)
+    generated_at = _short_timestamp(trend_summary.generated_at)
+    unique_runs = len({row["run_id"] for row in rows})
+    metric_names = sorted({row["metric_label"] for row in rows})
+    source_types = sorted({row["type"] for row in rows})
+    metric_options = "".join(
+        f"<option value='{html.escape(name)}'>{html.escape(name)}</option>"
+        for name in metric_names
+    )
+    source_options = "".join(
+        f"<option value='{html.escape(name)}'>{html.escape(name)}</option>"
+        for name in source_types
+    )
+
+    log_json_path = output_path.parent / "technical_logs.json"
+    logs_payload = _build_logs_payload(run_results=run_results, rows=rows, generated_at=trend_summary.generated_at)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    log_json_path.write_text(json.dumps(logs_payload, indent=2))
+    context_payload_json = _build_context_payload_json(rows)
+    table_rows = _build_table_rows(rows)
+    run_log_panels = _build_run_log_panels(run_results)
 
     html_doc = f"""
 <html>
@@ -1297,6 +1274,6 @@ def write_executive_html(
     _snapshot_executive_report(
         output_path=output_path,
         generated_at=trend_summary.generated_at,
-        keep_last_n=5,
+        keep_last_n=max(1, int(snapshot_keep_last_n)),
     )
     return output_path

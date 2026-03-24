@@ -18,6 +18,8 @@ from rag_eval_bdd.results_store import ResultsStore
 class ScenarioState:
     dataset_rows: List[DatasetRow] = field(default_factory=list)
     session_id: Optional[str] = None
+    ui_source_filename: Optional[str] = None
+    ui_num_chunks: Optional[int] = None
     uploaded_documents: List[str] = field(default_factory=list)
     selected_metrics: List[str] = field(default_factory=list)
     explicit_metrics: Optional[List[str]] = None

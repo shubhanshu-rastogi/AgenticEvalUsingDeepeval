@@ -9,7 +9,7 @@ cd rag_eval_bdd
 python3 -m venv .venv-ci
 . .venv-ci/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 ```
 
 ## Step 2: Run deterministic smoke gate

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import math
+import re
 import statistics
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List
+from typing import Any, Iterable, List
 from uuid import uuid4
 
 from deepeval.test_case import LLMTestCase
@@ -34,6 +35,12 @@ def _percentile(values: List[float], pct: float) -> float:
 
 
 class EvaluationRunner:
+    _REDACTION_RULES: list[tuple[re.Pattern[str], str]] = [
+        (re.compile(r"(?i)(bearer\s+)[a-z0-9\-._~+/]+=*"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(api[_-]?key[\"'\s:=]+)[a-z0-9\-._~+/]+=*"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b"), "[REDACTED_EMAIL]"),
+    ]
+
     def __init__(self, client: BackendClient, config: AppConfig):
         self.client = client
         self.config = config
@@ -66,6 +73,37 @@ class EvaluationRunner:
         if mode == "positional" and total_rows == len(selected_metrics):
             return [selected_metrics[row_index]]
         return selected_metrics
+
+    def _sanitize_text(self, value: str) -> str:
+        text = str(value)
+        if not self.config.evaluation.redact_sensitive_logs:
+            return text
+        sanitized = text
+        for pattern, replacement in self._REDACTION_RULES:
+            sanitized = pattern.sub(replacement, sanitized)
+        return sanitized
+
+    def _sanitize_payload(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {str(k): self._sanitize_payload(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._sanitize_payload(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._sanitize_payload(item) for item in value]
+        if isinstance(value, str):
+            return self._sanitize_text(value)
+        return value
+
+    def _prepare_logged_retrieval_context(self, chunks: List[str]) -> List[str]:
+        max_chars = max(100, int(self.config.evaluation.max_logged_retrieval_context_chars))
+        log_full = bool(self.config.evaluation.log_full_retrieval_context)
+        prepared: List[str] = []
+        for chunk in chunks:
+            item = str(chunk)
+            if not log_full:
+                item = item[:max_chars]
+            prepared.append(self._sanitize_text(item))
+        return prepared
 
     def _extract_metrics_from_row(self, row: DatasetRow) -> List[str]:
         if not row.additional_metadata:
@@ -169,7 +207,15 @@ class EvaluationRunner:
             answer = str(raw_response.get("answer", ""))
             retrieval_context = raw_response.get("retrieval_context", []) or []
             trimmed_retrieval_context = self._trim_retrieval_context(retrieval_context)
+            logged_retrieval_context = self._prepare_logged_retrieval_context(trimmed_retrieval_context)
             expected_output = row.expected_answer or answer
+
+            if self.config.evaluation.log_raw_payloads:
+                logged_request = self._sanitize_payload(raw_request)
+                logged_response = self._sanitize_payload(raw_response)
+            else:
+                logged_request = {}
+                logged_response = {}
 
             test_case = LLMTestCase(
                 input=row.question,
@@ -218,6 +264,8 @@ class EvaluationRunner:
                     passed = getattr(metric, "success", None)
                     if passed is None and isinstance(score, (int, float)):
                         passed = float(score) >= threshold
+                    reason = getattr(metric, "reason", None)
+                    error = getattr(metric, "error", None)
 
                     metric_results.append(
                         MetricResult(
@@ -225,8 +273,8 @@ class EvaluationRunner:
                             threshold=threshold,
                             score=float(score) if isinstance(score, (int, float)) else None,
                             passed=bool(passed) if passed is not None else None,
-                            reason=getattr(metric, "reason", None),
-                            error=getattr(metric, "error", None),
+                            reason=self._sanitize_text(reason) if reason else None,
+                            error=self._sanitize_text(error) if error else None,
                             evaluation_model=getattr(metric, "evaluation_model", None),
                         )
                     )
@@ -238,7 +286,7 @@ class EvaluationRunner:
                             score=None,
                             passed=False,
                             reason=None,
-                            error=str(exc),
+                            error=self._sanitize_text(str(exc)),
                             evaluation_model=getattr(metric, "evaluation_model", None),
                         )
                     )
@@ -249,12 +297,12 @@ class EvaluationRunner:
                     question=row.question,
                     expected_answer=row.expected_answer,
                     actual_answer=answer,
-                    retrieval_context=trimmed_retrieval_context,
+                    retrieval_context=logged_retrieval_context,
                     category=row.category,
                     source_reference=row.source_reference,
                     metrics=metric_results,
-                    raw_request=raw_request,
-                    raw_response=raw_response,
+                    raw_request=logged_request,
+                    raw_response=logged_response,
                 )
             )
 

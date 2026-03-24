@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterator, List, Tuple
+
+try:
+    import fcntl
+except Exception:  # noqa: BLE001
+    fcntl = None
 
 from rag_eval_bdd.models import MetricTrend, RunIndexEntry, RunResult, TrendPoint, TrendSummary
 
@@ -18,21 +24,18 @@ class ResultsStore:
         self.trends_dir = base_dir / "trends"
         self.index_file = base_dir / "index.json"
         self.current_index_file = base_dir / "current_index.json"
+        self.lock_file = base_dir / ".results_store.lock"
 
         self.runs_dir.mkdir(parents=True, exist_ok=True)
         self.trends_dir.mkdir(parents=True, exist_ok=True)
+        self.lock_file.parent.mkdir(parents=True, exist_ok=True)
+        self.lock_file.touch(exist_ok=True)
         self._ensure_index_file(self.index_file)
         self._ensure_index_file(self.current_index_file)
 
     def save_run(self, run_result: RunResult) -> Tuple[Path, TrendSummary]:
         run_dir = self.runs_dir / run_result.run_id
-        run_dir.mkdir(parents=True, exist_ok=True)
         results_file = run_dir / "results.json"
-        results_file.write_text(run_result.model_dump_json(indent=2))
-
-        entries = self._rebuild_index_entries(limit=self._trend_history_limit())
-
-        current_entries = self._load_current_entries()
         new_entry = RunIndexEntry(
             run_id=run_result.run_id,
             timestamp=run_result.timestamp,
@@ -40,14 +43,28 @@ class ResultsStore:
             feature=run_result.feature,
             scenario=run_result.scenario,
         )
-        deduped = [entry for entry in current_entries if entry.run_id != new_entry.run_id]
-        deduped.insert(0, new_entry)
-        current_entries = deduped
-        self._write_current_entries(current_entries)
 
-        trend_summary = self._build_trends(entries)
-        trend_file = self.trends_dir / "last5.json"
-        trend_file.write_text(trend_summary.model_dump_json(indent=2))
+        with self._exclusive_lock():
+            run_dir.mkdir(parents=True, exist_ok=True)
+            self._atomic_write_text(results_file, run_result.model_dump_json(indent=2))
+
+            entries = self._upsert_entry(
+                entries=self._load_index_entries(),
+                new_entry=new_entry,
+                limit=self._trend_history_limit(),
+            )
+            self._write_index_entries(entries)
+
+            current_entries = self._upsert_entry(
+                entries=self._load_current_entries(),
+                new_entry=new_entry,
+                limit=0,
+            )
+            self._write_current_entries(current_entries)
+
+            trend_summary = self._build_trends(entries)
+            trend_file = self.trends_dir / "last5.json"
+            self._atomic_write_text(trend_file, trend_summary.model_dump_json(indent=2))
 
         return run_dir, trend_summary
 
@@ -74,13 +91,20 @@ class ResultsStore:
         return run_results
 
     def reset_current_session(self) -> None:
-        self._write_current_entries([])
+        with self._exclusive_lock():
+            self._write_current_entries([])
 
     def refresh_trends(self) -> TrendSummary:
-        entries = self._rebuild_index_entries(limit=self._trend_history_limit())
-        trend_summary = self._build_trends(entries)
-        trend_file = self.trends_dir / "last5.json"
-        trend_file.write_text(trend_summary.model_dump_json(indent=2))
+        with self._exclusive_lock():
+            entries = self._load_index_entries()
+            if not entries:
+                entries = self._rebuild_index_entries(limit=self._trend_history_limit())
+            entries.sort(key=lambda entry: entry.timestamp, reverse=True)
+            entries = entries[: self._trend_history_limit()]
+            self._write_index_entries(entries)
+            trend_summary = self._build_trends(entries)
+            trend_file = self.trends_dir / "last5.json"
+            self._atomic_write_text(trend_file, trend_summary.model_dump_json(indent=2))
         return trend_summary
 
     def _load_index_entries(self) -> List[RunIndexEntry]:
@@ -97,7 +121,7 @@ class ResultsStore:
 
     def _ensure_index_file(self, index_file: Path) -> None:
         if not index_file.exists():
-            index_file.write_text('{"runs": []}\n')
+            self._atomic_write_text(index_file, '{"runs": []}\n')
 
     def _load_entries(self, index_file: Path) -> List[RunIndexEntry]:
         raw = json.loads(index_file.read_text() or '{"runs": []}')
@@ -106,7 +130,37 @@ class ResultsStore:
 
     def _write_entries(self, index_file: Path, entries: List[RunIndexEntry]) -> None:
         payload = {"runs": [entry.model_dump() for entry in entries]}
-        index_file.write_text(json.dumps(payload, indent=2))
+        self._atomic_write_text(index_file, json.dumps(payload, indent=2))
+
+    @contextmanager
+    def _exclusive_lock(self) -> Iterator[None]:
+        with self.lock_file.open("a+") as lock_handle:
+            if fcntl is not None:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
+    def _atomic_write_text(self, path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = path.with_suffix(f"{path.suffix}.tmp")
+        tmp_path.write_text(content)
+        tmp_path.replace(path)
+
+    def _upsert_entry(
+        self,
+        entries: List[RunIndexEntry],
+        new_entry: RunIndexEntry,
+        limit: int,
+    ) -> List[RunIndexEntry]:
+        deduped = [entry for entry in entries if entry.run_id != new_entry.run_id]
+        deduped.append(new_entry)
+        deduped.sort(key=lambda entry: entry.timestamp, reverse=True)
+        if limit > 0:
+            deduped = deduped[:limit]
+        return deduped
 
     def _build_trends(self, entries: List[RunIndexEntry]) -> TrendSummary:
         metric_map: Dict[str, List[TrendPoint]] = {}

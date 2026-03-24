@@ -59,8 +59,12 @@ rag_eval_bdd/.venv-ci/
 rag_eval_bdd/allure-results/
 rag_eval_bdd/allure-report/
 rag_eval_bdd/results/index.json
+rag_eval_bdd/results/current_index.json
 rag_eval_bdd/results/runs/*
 !rag_eval_bdd/results/runs/.gitkeep
+rag_eval_bdd/results/reports/*.html
+rag_eval_bdd/results/reports/technical_logs.json
 rag_eval_bdd/results/trends/*.png
 rag_eval_bdd/results/trends/*.html
 rag_eval_bdd/results/trends/last5.json
+rag_eval_bdd/data/generated/*_live_questions.meta.json

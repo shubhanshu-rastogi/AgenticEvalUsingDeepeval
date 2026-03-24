@@ -1,0 +1,11 @@
+# Reproducible dependency pins for rag_eval_bdd runtime and CI.
+pytest==8.4.2
+pytest-bdd==7.1.2
+allure-pytest==2.14.2
+requests==2.32.3
+pydantic==2.10.6
+PyYAML==6.0.2
+python-dotenv==1.0.1
+deepeval==1.5.0
+rich==13.9.4
+matplotlib==3.9.2

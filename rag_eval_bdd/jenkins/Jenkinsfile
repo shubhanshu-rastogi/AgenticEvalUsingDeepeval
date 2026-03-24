@@ -46,13 +46,12 @@ pipeline {
       }
     }
 
-    stage('Checkout Eval Framework') {
+    stage('Validate Workspace') {
       steps {
-        dir('rag_eval_bdd') {
-          deleteDir()
-          git branch: 'main',
-              url: 'https://github.com/shubhanshu-rastogi/AgenticEvalUsingDeepeval.git'
-        }
+        sh '''
+          test -d rag_eval_bdd
+          test -f rag_eval_bdd/requirements.txt
+        '''
       }
     }
 
@@ -63,7 +62,7 @@ pipeline {
           python3 -m venv .venv-ci
           . .venv-ci/bin/activate
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -c constraints.txt
         '''
       }
     }

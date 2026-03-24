@@ -48,7 +48,8 @@ def evaluate_layer2(
                 name="Completeness",
                 criteria=(
                     "Assess whether the answer is complete with respect to the question "
-                    "given the provided context. Score 0 to 1."
+                    "given the provided context. Assign an integer score from 0 to 10 "
+                    "where 10 means fully complete and 0 means incomplete."
                 ),
             )
         )

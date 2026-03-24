@@ -14,6 +14,8 @@ class BackendConfig(BaseModel):
     timeout_s: int = 120
     retries: int = 3
     backoff_s: float = 1.0
+    ask_cache_max_entries: int = 512
+    ask_cache_ttl_s: int = 1800
 
 
 class ThresholdsConfig(BaseModel):
@@ -27,6 +29,7 @@ class ThresholdsConfig(BaseModel):
 
 class ReportingConfig(BaseModel):
     keep_last_n_runs: int = 5
+    executive_snapshot_keep_last_n: int = 5
     enable_trend_charts: bool = True
     trend_status_pass_rate_rule: Literal["none", "min_pass_rate", "threshold_based"] = "min_pass_rate"
     trend_status_min_pass_rate: float = Field(default=100.0, ge=0.0, le=100.0)
@@ -50,6 +53,10 @@ class EvaluationConfig(BaseModel):
     fresh_session_per_question: bool = False
     disable_context_trimming: bool = False
     metric_question_mapping_mode: Literal["all", "positional", "row"] = "all"
+    log_raw_payloads: bool = False
+    log_full_retrieval_context: bool = False
+    max_logged_retrieval_context_chars: int = 700
+    redact_sensitive_logs: bool = True
 
 
 class AppConfig(BaseModel):
