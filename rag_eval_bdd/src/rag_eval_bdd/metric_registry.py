@@ -178,3 +178,5 @@ def build_metric(metric_name: str, config: AppConfig):
         )
 
     raise ValueError(f"Unsupported metric: {metric_name}")
+
+
