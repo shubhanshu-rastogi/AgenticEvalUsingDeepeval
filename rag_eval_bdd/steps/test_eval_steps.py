@@ -78,16 +78,18 @@ def _persist_results_for_reporting(scenario_state, results_store, framework_root
     attach_text("selected_metrics", ", ".join(scenario_state.selected_metrics))
     attach_json("dataset_rows", [row.model_dump() for row in scenario_state.dataset_rows])
 
+    current_runs = results_store.load_current_session_run_results()
+    if not current_runs:
+        current_runs = [scenario_state.run_result]
+
     trend_html = write_trend_html(
         trend_summary,
         output_path=framework_root / "results" / "trends" / "last5.html",
         pass_rate_rule=app_config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=app_config.reporting.trend_status_min_pass_rate,
+        run_results=current_runs,
     )
 
-    current_runs = results_store.load_current_session_run_results()
-    if not current_runs:
-        current_runs = [scenario_state.run_result]
     write_executive_html(
         run_results=current_runs,
         trend_summary=trend_summary,
@@ -95,6 +97,8 @@ def _persist_results_for_reporting(scenario_state, results_store, framework_root
         pass_rate_rule=app_config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=app_config.reporting.trend_status_min_pass_rate,
         snapshot_keep_last_n=app_config.reporting.executive_snapshot_keep_last_n,
+        max_p95_latency_ms=app_config.evaluation.max_p95_latency_ms,
+        max_avg_tokens_per_request=app_config.evaluation.max_avg_tokens_per_request,
     )
     attach_run_artifacts(scenario_state.run_result, trend_summary, [], trend_html)
 

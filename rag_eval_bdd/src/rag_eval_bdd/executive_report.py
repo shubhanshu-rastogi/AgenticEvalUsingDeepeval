@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 import html
 import json
+import math
 import re
 from pathlib import Path
 import shutil
@@ -79,6 +80,57 @@ def _truncate(text: str, limit: int = 180) -> str:
     return f"{text[:limit - 3]}..."
 
 
+def _format_ms(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:.2f}"
+
+
+def _format_number(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:.2f}"
+
+
+def _format_int(value: int | None) -> str:
+    if value is None:
+        return "N/A"
+    return str(int(value))
+
+
+def _format_usd(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:.6f}"
+
+
+def _collect_request_points(run_results: Iterable[RunResult]) -> list[dict[str, Any]]:
+    points: list[dict[str, Any]] = []
+    for run in run_results:
+        for question in run.question_results:
+            points.append(
+                {
+                    "run_id": run.run_id,
+                    "question_id": question.question_id,
+                    "latency_ms": question.latency_ms,
+                    "cache_hit": question.cache_hit,
+                    "prompt_tokens": question.prompt_tokens,
+                    "completion_tokens": question.completion_tokens,
+                    "total_tokens": question.total_tokens,
+                    "token_cost_usd": question.token_cost_usd,
+                }
+            )
+    return points
+
+
+def _percentile(values: List[float], pct: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    idx = min(len(ordered) - 1, max(0, math.ceil((pct / 100.0) * len(ordered)) - 1))
+    return float(ordered[idx])
+
+
 def _collect_rows(run_results: Iterable[RunResult]) -> list[dict]:
     rows: list[dict] = []
     for run in run_results:
@@ -109,6 +161,12 @@ def _collect_rows(run_results: Iterable[RunResult]) -> list[dict]:
                         "scenario": run.scenario,
                         "feature": run.feature,
                         "evaluation_model": metric.evaluation_model or "",
+                        "latency_ms": question.latency_ms,
+                        "cache_hit": question.cache_hit,
+                        "prompt_tokens": question.prompt_tokens,
+                        "completion_tokens": question.completion_tokens,
+                        "total_tokens": question.total_tokens,
+                        "token_cost_usd": question.token_cost_usd,
                     }
                 )
     return rows
@@ -124,6 +182,14 @@ def _format_threshold(threshold: float | None) -> str:
     if threshold is None:
         return "N/A"
     return f"{threshold:.2f}"
+
+
+def _format_cache_hit(cache_hit: bool | None) -> str:
+    if cache_hit is True:
+        return "Yes"
+    if cache_hit is False:
+        return "No"
+    return "N/A"
 
 
 def _normalize_reason_for_grouping(reason: str) -> str:
@@ -179,7 +245,7 @@ def _top_failure_reasons_text(rows: list[dict]) -> str:
     return "; ".join(summary_parts) if summary_parts else "No failed reasons captured."
 
 
-def _summary_cards(rows: list[dict]) -> dict[str, str]:
+def _summary_cards(rows: list[dict], run_results: List[RunResult]) -> dict[str, str]:
     total = len(rows)
     pass_count = sum(1 for row in rows if row["status"] == "PASS")
     fail_count = sum(1 for row in rows if row["status"] == "FAIL")
@@ -202,6 +268,36 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
     ) if live_rows else 0.0
 
     top_reasons = _top_failure_reasons_text(rows)
+    request_points = _collect_request_points(run_results)
+    latencies = [
+        float(point["latency_ms"])
+        for point in request_points
+        if isinstance(point["latency_ms"], (int, float))
+    ]
+    median_latency_ms = _percentile(latencies, 50) if latencies else None
+    p95_latency_ms = _percentile(latencies, 95) if latencies else None
+
+    total_tokens_values = [
+        int(point["total_tokens"])
+        for point in request_points
+        if isinstance(point["total_tokens"], int)
+    ]
+    total_tokens = sum(total_tokens_values) if total_tokens_values else None
+    avg_tokens_per_request = (
+        float(sum(total_tokens_values) / len(total_tokens_values))
+        if total_tokens_values
+        else None
+    )
+
+    token_cost_values = [
+        float(point["token_cost_usd"])
+        for point in request_points
+        if isinstance(point["token_cost_usd"], (int, float))
+    ]
+    total_token_cost_usd = sum(token_cost_values) if token_cost_values else None
+    cache_hits = sum(1 for point in request_points if point["cache_hit"] is True)
+    cache_misses = sum(1 for point in request_points if point["cache_hit"] is False)
+    cache_unknown = len(request_points) - cache_hits - cache_misses
 
     return {
         "total_rows": str(total),
@@ -213,7 +309,54 @@ def _summary_cards(rows: list[dict]) -> dict[str, str]:
         "external_rate": f"{external_rate:.2f}%",
         "live_rate": f"{live_rate:.2f}%",
         "top_reasons": top_reasons,
+        "median_latency_ms": _format_ms(median_latency_ms),
+        "p95_latency_ms": _format_ms(p95_latency_ms),
+        "total_tokens": _format_int(total_tokens),
+        "avg_tokens_per_request": _format_number(avg_tokens_per_request),
+        "total_token_cost_usd": _format_usd(total_token_cost_usd),
+        "cache_split": f"{cache_hits} / {cache_misses} / {cache_unknown}",
     }
+
+
+def _quality_gate_status(rows: list[dict]) -> str:
+    if not rows:
+        return "N/A"
+    fail_count = sum(1 for row in rows if row["status"] == "FAIL")
+    pass_count = sum(1 for row in rows if row["status"] == "PASS")
+    if fail_count > 0:
+        return "FAIL"
+    if pass_count > 0:
+        return "PASS"
+    return "N/A"
+
+
+def _performance_gate_status(metric_value: float | None, max_threshold: float | None) -> str:
+    if max_threshold is None:
+        return "N/A"
+    if metric_value is None:
+        return "N/A"
+    return "PASS" if metric_value <= max_threshold else "FAIL"
+
+
+def _aggregate_performance_gate_status(statuses: list[str]) -> str:
+    active = [status for status in statuses if status != "N/A"]
+    if not active:
+        return "N/A"
+    if any(status == "FAIL" for status in active):
+        return "FAIL"
+    return "PASS"
+
+
+def _combined_gate_status(quality_status: str, performance_status: str) -> str:
+    if quality_status == "FAIL" or performance_status == "FAIL":
+        return "FAIL"
+    if quality_status == "N/A" and performance_status == "N/A":
+        return "N/A"
+    if performance_status == "N/A":
+        return quality_status
+    if quality_status == "N/A":
+        return performance_status
+    return "PASS"
 
 
 def _metric_status_counts(rows: list[dict]) -> Dict[str, Dict[str, int]]:
@@ -347,6 +490,12 @@ def _build_logs_payload(run_results: List[RunResult], rows: list[dict], generate
                 "scenario": row["scenario"],
                 "feature": row["feature"],
                 "evaluation_model": row["evaluation_model"],
+                "latency_ms": row["latency_ms"],
+                "cache_hit": row["cache_hit"],
+                "prompt_tokens": row["prompt_tokens"],
+                "completion_tokens": row["completion_tokens"],
+                "total_tokens": row["total_tokens"],
+                "token_cost_usd": row["token_cost_usd"],
             }
             for row in rows
         ],
@@ -380,6 +529,7 @@ def _build_table_rows(rows: list[dict]) -> list[str]:
     for row in rows:
         status_class = _badge_class(row["status"])
         reason = row["reason"] or "N/A"
+        run_id = str(row["run_id"])
         context_chunks = row["retrieval_context"]
         context_count = len(context_chunks)
         context_preview_text = _truncate(" ".join(context_chunks), 140) if context_chunks else "No retrieval context captured."
@@ -398,10 +548,15 @@ def _build_table_rows(rows: list[dict]) -> list[str]:
             f"data-status='{html.escape(row['status'])}' "
             ">"
             f"<td>{_metric_label_with_tooltip(row['metric'])}</td>"
-            f"<td>{html.escape(row['run_id'])}</td>"
-            f"<td>{html.escape(row['timestamp_short'])}</td>"
+            "<td class='run-id-col'>"
+            f"<span class='run-id-cell' title='{html.escape(run_id)}'>{html.escape(run_id)}</span>"
+            "</td>"
+            f"<td>{_format_ms(row['latency_ms'])}</td>"
             f"<td>{html.escape(row['type'])}</td>"
             f"<td>{_format_threshold(row['threshold'])}</td>"
+            f"<td>{_format_int(row['prompt_tokens'])}</td>"
+            f"<td>{_format_int(row['completion_tokens'])}</td>"
+            f"<td>{_format_int(row['total_tokens'])}</td>"
             f"<td title='{html.escape(row['question'])}'>{html.escape(_truncate(row['question'], 90))}</td>"
             f"<td title='{html.escape(row['expected_output'])}'>{html.escape(_truncate(row['expected_output'], 90))}</td>"
             f"<td title='{html.escape(row['actual_output'])}'>{html.escape(_truncate(row['actual_output'], 90))}</td>"
@@ -410,6 +565,7 @@ def _build_table_rows(rows: list[dict]) -> list[str]:
             f"<td><span class='badge {status_class}'>{html.escape(row['status'])}</span></td>"
             f"<td title='{html.escape(reason)}'>{html.escape(_truncate(reason, 95))}</td>"
             f"<td><a class='tech-link' href='#technical-logs'>View Log</a></td>"
+            f"<td class='timestamp-col'>{html.escape(row['timestamp_short'])}</td>"
             "</tr>"
         )
     return rendered
@@ -422,9 +578,35 @@ def write_executive_html(
     pass_rate_rule: str = "min_pass_rate",
     min_pass_rate: float = 100.0,
     snapshot_keep_last_n: int = 5,
+    max_p95_latency_ms: float | None = None,
+    max_avg_tokens_per_request: float | None = None,
 ) -> Path:
     rows = _collect_rows(run_results)
-    summary = _summary_cards(rows)
+    summary = _summary_cards(rows, run_results)
+    request_points = _collect_request_points(run_results)
+    raw_latencies = [
+        float(point["latency_ms"])
+        for point in request_points
+        if isinstance(point["latency_ms"], (int, float))
+    ]
+    raw_total_tokens = [
+        int(point["total_tokens"])
+        for point in request_points
+        if isinstance(point["total_tokens"], int)
+    ]
+    p95_latency_ms = _percentile(raw_latencies, 95) if raw_latencies else None
+    avg_tokens_per_request = (
+        float(sum(raw_total_tokens) / len(raw_total_tokens))
+        if raw_total_tokens
+        else None
+    )
+    quality_gate_status = _quality_gate_status(rows)
+    p95_gate_status = _performance_gate_status(p95_latency_ms, max_p95_latency_ms)
+    avg_tokens_gate_status = _performance_gate_status(avg_tokens_per_request, max_avg_tokens_per_request)
+    performance_gate_status = _aggregate_performance_gate_status(
+        [p95_gate_status, avg_tokens_gate_status]
+    )
+    combined_gate_status = _combined_gate_status(quality_gate_status, performance_gate_status)
     generated_at = _short_timestamp(trend_summary.generated_at)
     unique_runs = len({row["run_id"] for row in rows})
     metric_names = sorted({row["metric_label"] for row in rows})
@@ -679,7 +861,25 @@ def write_executive_html(
       max-height: 62vh;
     }}
     .table-wrap table {{
-      min-width: 1500px;
+      min-width: 1320px;
+    }}
+    .report-table .run-id-col {{
+      width: 120px;
+      max-width: 120px;
+      white-space: nowrap;
+    }}
+    .run-id-cell {{
+      display: inline-block;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+    }}
+    .report-table .timestamp-col {{
+      white-space: nowrap;
+      min-width: 110px;
     }}
     .badge {{
       border-radius: 999px;
@@ -986,7 +1186,61 @@ def write_executive_html(
       <article class="summary-card"><span class="label">Inline Data Pass Rate</span><span class="value">{summary["inline_rate"]}</span></article>
       <article class="summary-card"><span class="label">External Data Pass Rate</span><span class="value">{summary["external_rate"]}</span></article>
       <article class="summary-card"><span class="label">Live Data Pass Rate</span><span class="value">{summary["live_rate"]}</span></article>
+      <article class="summary-card"><span class="label">Median Latency (ms)</span><span class="value">{summary["median_latency_ms"]}</span></article>
+      <article class="summary-card"><span class="label">P95 Latency (ms)</span><span class="value">{summary["p95_latency_ms"]}</span></article>
+      <article class="summary-card"><span class="label">Total Tokens</span><span class="value">{summary["total_tokens"]}</span></article>
+      <article class="summary-card"><span class="label">Avg Tokens / Request</span><span class="value">{summary["avg_tokens_per_request"]}</span></article>
+      <article class="summary-card"><span class="label">Quality Gate Status</span><span class="value">{quality_gate_status}</span></article>
+      <article class="summary-card"><span class="label">Performance Gate Status</span><span class="value">{performance_gate_status}</span></article>
+      <article class="summary-card"><span class="label">Combined Gate Status</span><span class="value">{combined_gate_status}</span></article>
       <article class="summary-card"><span class="label">Top Failure Reasons</span><span class="value" style="font-size: 14px;">{html.escape(summary["top_reasons"])}</span></article>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Performance Gates</h2>
+          <div class="kicker">Performance checks are evaluated separately from quality status.</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height: 220px;">
+        <table class="metric-health">
+          <thead>
+            <tr>
+              <th>Gate</th>
+              <th>Observed</th>
+              <th>Threshold</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>P95 Latency (ms)</td>
+              <td>{_format_ms(p95_latency_ms)}</td>
+              <td>{_format_ms(max_p95_latency_ms)}</td>
+              <td><span class="badge {_badge_class(p95_gate_status)}">{p95_gate_status}</span></td>
+            </tr>
+            <tr>
+              <td>Avg Tokens / Request</td>
+              <td>{_format_number(avg_tokens_per_request)}</td>
+              <td>{_format_number(max_avg_tokens_per_request)}</td>
+              <td><span class="badge {_badge_class(avg_tokens_gate_status)}">{avg_tokens_gate_status}</span></td>
+            </tr>
+            <tr>
+              <td>Overall Performance Gate</td>
+              <td>{performance_gate_status}</td>
+              <td>N/A</td>
+              <td><span class="badge {_badge_class(performance_gate_status)}">{performance_gate_status}</span></td>
+            </tr>
+            <tr>
+              <td>Combined Quality + Performance</td>
+              <td>{combined_gate_status}</td>
+              <td>N/A</td>
+              <td><span class="badge {_badge_class(combined_gate_status)}">{combined_gate_status}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="section">
@@ -1045,9 +1299,12 @@ def write_executive_html(
             <tr>
               <th>Metric</th>
               <th>RunID</th>
-              <th>TimeStamp</th>
+              <th>Latency (ms)</th>
               <th>Type</th>
               <th>Threshold</th>
+              <th>Prompt Tokens</th>
+              <th>Completion Tokens</th>
+              <th>Total Tokens</th>
               <th>Question</th>
               <th>Expected Output</th>
               <th>Actual Output</th>
@@ -1056,6 +1313,7 @@ def write_executive_html(
               <th>Result</th>
               <th>Reason For Score</th>
               <th>Technical Logs</th>
+              <th>TimeStamp</th>
             </tr>
           </thead>
           <tbody id="reportBody">

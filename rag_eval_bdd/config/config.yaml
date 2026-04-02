@@ -46,5 +46,7 @@ evaluation:
   log_full_retrieval_context: false
   max_logged_retrieval_context_chars: 700
   redact_sensitive_logs: true
+  max_p95_latency_ms: 3000
+  max_avg_tokens_per_request: 2000
 
 model: "gpt-5.4"

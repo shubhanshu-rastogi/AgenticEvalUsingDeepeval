@@ -85,6 +85,12 @@ def _metric_display_name(metric_name: str) -> str:
     return metric_name.replace("_", " ").title()
 
 
+def _truncate(text: str, limit: int = 180) -> str:
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit - 3]}..."
+
+
 def _svg_line_path(points: list[tuple[float, float]]) -> str:
     if not points:
         return ""
@@ -446,22 +452,236 @@ def _build_combined_trend_card(
     """
 
 
+def _format_perf_number(value: float | None, decimals: int = 2) -> str:
+    if value is None:
+        return "N/A"
+    return format(float(value), f".{decimals}f")
+
+
+def _format_perf_int(value: int | None) -> str:
+    if value is None:
+        return "N/A"
+    return str(int(value))
+
+
+def _perf_bounds(values: list[float]) -> tuple[float, float]:
+    if not values:
+        return 0.0, 1.0
+    minimum = min(values)
+    maximum = max(values)
+    if minimum == maximum:
+        padding = max(abs(minimum) * 0.10, 1.0)
+        return max(0.0, minimum - padding), maximum + padding
+    padding = (maximum - minimum) * 0.08
+    return max(0.0, minimum - padding), maximum + padding
+
+
+def _build_performance_svg(clustered_runs: list[RunResult]) -> str:
+    if not clustered_runs:
+        return ""
+
+    width, height = 1080, 280
+    left, right, top, bottom = 66, 72, 24, 48
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+
+    def x_pos(i: int) -> float:
+        if len(clustered_runs) == 1:
+            return left + (plot_w / 2.0)
+        return left + (plot_w * i / (len(clustered_runs) - 1))
+
+    def y_pos(value: float, lower: float, upper: float) -> float:
+        if upper <= lower:
+            return top + (plot_h / 2.0)
+        normalized = (value - lower) / (upper - lower)
+        return top + (1.0 - normalized) * plot_h
+
+    latency_points = [
+        (idx, float(run.performance.p95_latency_ms))
+        for idx, run in enumerate(clustered_runs)
+        if run.performance.p95_latency_ms is not None
+    ]
+    token_points = [
+        (idx, float(run.performance.avg_total_tokens_per_request))
+        for idx, run in enumerate(clustered_runs)
+        if run.performance.avg_total_tokens_per_request is not None
+    ]
+    if not latency_points and not token_points:
+        return ""
+
+    latency_min, latency_max = _perf_bounds([point[1] for point in latency_points]) if latency_points else (0.0, 1.0)
+    token_min, token_max = _perf_bounds([point[1] for point in token_points]) if token_points else (0.0, 1.0)
+
+    grid_lines: list[str] = []
+    for tick in [0.0, 0.25, 0.5, 0.75, 1.0]:
+        y = top + tick * plot_h
+        latency_value = latency_max - tick * (latency_max - latency_min)
+        token_value = token_max - tick * (token_max - token_min)
+        grid_lines.append(
+            f"<line x1='{left}' y1='{y:.2f}' x2='{left + plot_w}' y2='{y:.2f}' class='grid-line' />"
+        )
+        grid_lines.append(
+            f"<text x='8' y='{y + 4:.2f}' class='axis-label'>{_format_perf_number(latency_value, 0)}</text>"
+        )
+        grid_lines.append(
+            f"<text x='{width - 8}' y='{y + 4:.2f}' class='axis-label axis-label-right'>{_format_perf_number(token_value, 0)}</text>"
+        )
+
+    x_labels: list[str] = []
+    for idx, run in enumerate(clustered_runs):
+        x = x_pos(idx)
+        x_labels.append(
+            f"<text x='{x:.2f}' y='{height - 14}' text-anchor='middle' class='axis-label'>"
+            f"{html.escape(_short_timestamp(run.timestamp))}</text>"
+        )
+
+    latency_coords = [(x_pos(idx), y_pos(value, latency_min, latency_max)) for idx, value in latency_points]
+    token_coords = [(x_pos(idx), y_pos(value, token_min, token_max)) for idx, value in token_points]
+
+    latency_path = (
+        f"<path d='{_svg_line_path(latency_coords)}' class='perf-line-latency smooth-line'></path>"
+        if latency_coords
+        else ""
+    )
+    token_path = (
+        f"<path d='{_svg_line_path(token_coords)}' class='perf-line-tokens smooth-line'></path>"
+        if token_coords
+        else ""
+    )
+
+    latency_dots = "".join(
+        f"<circle cx='{x:.2f}' cy='{y:.2f}' r='4.2' class='perf-dot-latency'></circle>"
+        for x, y in latency_coords
+    )
+    token_dots = "".join(
+        f"<circle cx='{x:.2f}' cy='{y:.2f}' r='4.0' class='perf-dot-tokens'></circle>"
+        for x, y in token_coords
+    )
+
+    return f"""
+    <svg viewBox="0 0 {width} {height}" class="trend-svg performance-trend-svg" role="img" aria-label="Performance trend over last runs">
+      <rect x="0" y="0" width="{width}" height="{height}" class="plot-bg"></rect>
+      {''.join(grid_lines)}
+      <line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" class="axis-line"></line>
+      <line x1="{left + plot_w}" y1="{top}" x2="{left + plot_w}" y2="{top + plot_h}" class="axis-line"></line>
+      <line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="axis-line"></line>
+      <text x="{left + 2}" y="{top - 6}" class="legend-label">P95 Latency (ms)</text>
+      <text x="{left + plot_w - 2}" y="{top - 6}" class="legend-label" text-anchor="end">Avg Tokens / Request</text>
+      {latency_path}
+      {token_path}
+      {latency_dots}
+      {token_dots}
+      {''.join(x_labels)}
+    </svg>
+    """
+
+
+def _build_performance_trend_card(
+    run_results: list[RunResult],
+    keep_last_n: int,
+) -> str:
+    if not run_results:
+        return ""
+
+    # Performance trend should reflect each run directly (no timeline clustering).
+    # Sort oldest -> newest, then apply dashboard window size.
+    ordered_runs = sorted(run_results, key=lambda run: run.timestamp)
+    if keep_last_n > 0:
+        ordered_runs = ordered_runs[-keep_last_n:]
+
+    if not ordered_runs:
+        return ""
+
+    first = ordered_runs[0]
+    latest = ordered_runs[-1]
+
+    p95_delta = None
+    if (
+        latest.performance.p95_latency_ms is not None
+        and first.performance.p95_latency_ms is not None
+    ):
+        p95_delta = float(latest.performance.p95_latency_ms) - float(first.performance.p95_latency_ms)
+
+    avg_tokens_delta = None
+    if (
+        latest.performance.avg_total_tokens_per_request is not None
+        and first.performance.avg_total_tokens_per_request is not None
+    ):
+        avg_tokens_delta = (
+            float(latest.performance.avg_total_tokens_per_request)
+            - float(first.performance.avg_total_tokens_per_request)
+        )
+
+    run_rows: list[str] = []
+    for run in ordered_runs:
+        perf = run.performance
+        run_rows.append(
+            "<tr>"
+            f"<td title='{html.escape(run.run_id)}'>{html.escape(_truncate(run.run_id, 22))}</td>"
+            f"<td>{html.escape(_short_timestamp(run.timestamp))}</td>"
+            f"<td>{_format_perf_number(perf.p95_latency_ms)}</td>"
+            f"<td>{_format_perf_number(perf.avg_total_tokens_per_request)}</td>"
+            f"<td>{_format_perf_int(perf.total_tokens)}</td>"
+            f"<td>{_format_perf_int(perf.request_count)}</td>"
+            "</tr>"
+        )
+
+    performance_svg = _build_performance_svg(ordered_runs)
+
+    return f"""
+    <section class="metric-card performance-card">
+      <div class="metric-header">
+        <h3>Performance Parameters (Last {len(ordered_runs)} Runs)</h3>
+        <span class="status-pill status-na">Operational Trend</span>
+      </div>
+      <div class="metric-kpis">
+        <div class="kpi"><span class="label">Latest P95 Latency (ms)</span><span class="value">{_format_perf_number(latest.performance.p95_latency_ms)}</span></div>
+        <div class="kpi"><span class="label">Latest Avg Tokens / Request</span><span class="value">{_format_perf_number(latest.performance.avg_total_tokens_per_request)}</span></div>
+        <div class="kpi"><span class="label">Latest Total Tokens</span><span class="value">{_format_perf_int(latest.performance.total_tokens)}</span></div>
+        <div class="kpi"><span class="label">P95 Delta (first to latest)</span><span class="value">{_format_delta(p95_delta)}</span></div>
+        <div class="kpi"><span class="label">Avg Tokens Delta</span><span class="value">{_format_delta(avg_tokens_delta)}</span></div>
+      </div>
+      <div class="perf-legend">
+        <span class="perf-legend-item"><span class="perf-swatch perf-swatch-latency"></span>P95 Latency (ms)</span>
+        <span class="perf-legend-item"><span class="perf-swatch perf-swatch-tokens"></span>Avg Tokens / Request</span>
+      </div>
+      <div class="chart-wrap">
+        {performance_svg}
+      </div>
+      <table class="runs-table">
+        <thead>
+          <tr><th>Run ID</th><th>Timestamp</th><th>P95 Latency (ms)</th><th>Avg Tokens / Request</th><th>Total Tokens</th><th>Requests</th></tr>
+        </thead>
+        <tbody>
+          {"".join(run_rows)}
+        </tbody>
+      </table>
+    </section>
+    """
+
+
 def write_trend_html(
     trend_summary: TrendSummary,
     output_path: Path,
     pass_rate_rule: str = "min_pass_rate",
     min_pass_rate: float = 100.0,
+    run_results: Iterable[RunResult] | None = None,
 ) -> Path:
     # Trend dashboard status is intentionally threshold-only.
     # Executive report continues to apply pass-rate rules independently.
     trend_status_rule = "none"
 
     timeline_clusters = _build_timeline_clusters(trend_summary)
+    run_results_list = list(run_results) if run_results is not None else []
     combined_trend_card = _build_combined_trend_card(
         trend_summary=trend_summary,
         pass_rate_rule=trend_status_rule,
         min_pass_rate=min_pass_rate,
         timeline_clusters=timeline_clusters,
+    )
+    performance_trend_card = _build_performance_trend_card(
+        run_results=run_results_list,
+        keep_last_n=trend_summary.keep_last_n,
     )
     metric_cards: List[str] = []
     for metric in trend_summary.metrics:
@@ -575,6 +795,8 @@ def write_trend_html(
       --warn: #f59e0b;
       --line-avg: #60a5fa;
       --line-pass: #f59e0b;
+      --line-latency: #38bdf8;
+      --line-tokens: #f59e0b;
       --line-threshold: #f87171;
       --grid: #26334c;
     }}
@@ -603,13 +825,24 @@ def write_trend_html(
     .axis-line {{ stroke: #4b5f82; stroke-width: 1; }}
     .axis-label {{ fill: #94a3b8; font-size: 11px; }}
     .legend-label {{ fill: #cbd5e1; font-size: 11px; }}
+    .axis-label-right {{ text-anchor: end; }}
     .avg-line {{ fill: none; stroke: var(--line-avg); stroke-width: 2.5; }}
     .pass-line {{ fill: none; stroke: var(--line-pass); stroke-width: 2; }}
     .smooth-line {{ stroke-linecap: round; stroke-linejoin: round; }}
     .combined-line {{ fill: none; stroke-width: 2.6; opacity: 0.96; }}
+    .performance-trend-svg {{ min-width: 900px; }}
+    .perf-line-latency {{ fill: none; stroke: var(--line-latency); stroke-width: 2.7; }}
+    .perf-line-tokens {{ fill: none; stroke: var(--line-tokens); stroke-width: 2.7; }}
+    .perf-dot-latency {{ fill: var(--line-latency); stroke: #0f172a; stroke-width: 1.3; }}
+    .perf-dot-tokens {{ fill: var(--line-tokens); stroke: #0f172a; stroke-width: 1.3; }}
     .threshold-line {{ stroke: var(--line-threshold); stroke-width: 1.5; stroke-dasharray: 5 5; }}
     .threshold-line-fill {{ fill: var(--line-threshold); }}
     .combined-legend {{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }}
+    .perf-legend {{ display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }}
+    .perf-legend-item {{ display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #dbe7ff; }}
+    .perf-swatch {{ width: 14px; height: 3px; border-radius: 3px; display: inline-block; }}
+    .perf-swatch-latency {{ background: var(--line-latency); }}
+    .perf-swatch-tokens {{ background: var(--line-tokens); }}
     .legend-item {{ display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #dbe7ff; }}
     .legend-swatch {{ width: 12px; height: 12px; border-radius: 3px; display: inline-block; }}
     .threshold-swatch {{ background: var(--line-threshold); border: 1px dashed #fda4af; }}
@@ -633,6 +866,7 @@ def write_trend_html(
     <span>Window: last {runs_count} runs</span>
   </div>
   {combined_trend_card}
+  {performance_trend_card}
   {"".join(metric_cards)}
 </body>
 </html>

@@ -144,6 +144,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
         output_path=trend_dir / "last5.html",
         pass_rate_rule=config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=config.reporting.trend_status_min_pass_rate,
+        run_results=run_results,
     )
     executive_path = write_executive_html(
         run_results=run_results,
@@ -152,6 +153,8 @@ def _cmd_report(args: argparse.Namespace) -> int:
         pass_rate_rule=config.reporting.trend_status_pass_rate_rule,
         min_pass_rate=config.reporting.trend_status_min_pass_rate,
         snapshot_keep_last_n=config.reporting.executive_snapshot_keep_last_n,
+        max_p95_latency_ms=config.evaluation.max_p95_latency_ms,
+        max_avg_tokens_per_request=config.evaluation.max_avg_tokens_per_request,
     )
     print(f"Executive report: {executive_path}")
     print(f"Trend dashboard: {trend_path}")

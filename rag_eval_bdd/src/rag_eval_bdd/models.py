@@ -57,6 +57,8 @@ class EvaluationConfig(BaseModel):
     log_full_retrieval_context: bool = False
     max_logged_retrieval_context_chars: int = 700
     redact_sensitive_logs: bool = True
+    max_p95_latency_ms: Optional[float] = None
+    max_avg_tokens_per_request: Optional[float] = None
 
 
 class AppConfig(BaseModel):
@@ -100,6 +102,12 @@ class QuestionEvalResult(BaseModel):
     metrics: List[MetricResult] = Field(default_factory=list)
     raw_request: Dict[str, Any] = Field(default_factory=dict)
     raw_response: Dict[str, Any] = Field(default_factory=dict)
+    latency_ms: Optional[float] = None
+    cache_hit: Optional[bool] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    token_cost_usd: Optional[float] = None
 
 
 class MetricAggregate(BaseModel):
@@ -119,6 +127,26 @@ class MetricAggregate(BaseModel):
     score_distribution: List[float] = Field(default_factory=list)
 
 
+class RunPerformanceAggregate(BaseModel):
+    request_count: int = 0
+    cached_request_count: int = 0
+    uncached_request_count: int = 0
+    latency_count: int = 0
+    avg_latency_ms: Optional[float] = None
+    p50_latency_ms: Optional[float] = None
+    p90_latency_ms: Optional[float] = None
+    p95_latency_ms: Optional[float] = None
+    max_latency_ms: Optional[float] = None
+    avg_cached_latency_ms: Optional[float] = None
+    avg_uncached_latency_ms: Optional[float] = None
+    token_usage_count: int = 0
+    total_prompt_tokens: Optional[int] = None
+    total_completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    avg_total_tokens_per_request: Optional[float] = None
+    total_token_cost_usd: Optional[float] = None
+
+
 class RunResult(BaseModel):
     run_id: str
     timestamp: str
@@ -129,6 +157,7 @@ class RunResult(BaseModel):
     dataset_size: int
     question_results: List[QuestionEvalResult] = Field(default_factory=list)
     metric_aggregates: List[MetricAggregate] = Field(default_factory=list)
+    performance: RunPerformanceAggregate = Field(default_factory=RunPerformanceAggregate)
     notes: Optional[str] = None
 
 

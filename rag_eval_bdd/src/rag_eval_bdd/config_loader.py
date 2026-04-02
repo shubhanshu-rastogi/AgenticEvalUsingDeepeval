@@ -46,6 +46,13 @@ def _parse_int_env(name: str) -> Optional[int]:
     return int(value)
 
 
+def _parse_float_env(name: str) -> Optional[float]:
+    value = os.getenv(name)
+    if value is None:
+        return None
+    return float(value)
+
+
 def _apply_notebook_parity_defaults(config: AppConfig) -> AppConfig:
     # Match notebook/demo behavior over cost optimization for closer score parity.
     config.thresholds.contextual_precision = 0.5
@@ -94,6 +101,14 @@ def _apply_env_overrides(config: AppConfig) -> AppConfig:
     max_chars = _parse_int_env("RAG_EVAL_MAX_CONTEXT_CHARS_PER_CHUNK")
     if max_chars is not None:
         config.evaluation.max_retrieval_context_chars_per_chunk = max_chars
+
+    max_p95_latency_ms = _parse_float_env("RAG_EVAL_MAX_P95_LATENCY_MS")
+    if max_p95_latency_ms is not None:
+        config.evaluation.max_p95_latency_ms = max_p95_latency_ms
+
+    max_avg_tokens_per_request = _parse_float_env("RAG_EVAL_MAX_AVG_TOKENS_PER_REQUEST")
+    if max_avg_tokens_per_request is not None:
+        config.evaluation.max_avg_tokens_per_request = max_avg_tokens_per_request
 
     log_context_chars = _parse_int_env("RAG_EVAL_MAX_LOGGED_CONTEXT_CHARS")
     if log_context_chars is not None:

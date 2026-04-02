@@ -81,6 +81,12 @@ def test_write_executive_html_contains_business_table_and_technical_logs(tmp_pat
     assert "Metric" in html
     assert "RunID" in html
     assert "PASS / FAIL / N/A" in html
+    assert "Latency (ms)" in html
+    assert "Cache Hit" in html
+    assert "Prompt Tokens" in html
+    assert "Completion Tokens" in html
+    assert "Total Tokens" in html
+    assert "Token Cost (USD)" in html
     assert "count-pass" in html
     assert "count-fail" in html
     assert "count-na" in html
@@ -92,10 +98,103 @@ def test_write_executive_html_contains_business_table_and_technical_logs(tmp_pat
     assert "context-link" in html
     assert "metric-tip-btn" in html
     assert html.count("How clean and focused was the retrieved evidence?") >= 2
+    assert "Median Latency (ms)" in html
+    assert "P95 Latency (ms)" in html
+    assert "Avg Tokens / Request" in html
+    assert "Performance Gate Status" in html
+    assert "Combined Gate Status" in html
+    assert "Performance Gates" in html
     assert "Open Trend Dashboard (Last 5 Runs)" in html
     assert "../trends/last5.html" in html
     assert "Download Full Technical Logs (JSON)" in html
     assert (tmp_path / "reports" / "technical_logs.json").exists()
+
+
+def test_write_executive_html_performance_gates_respect_thresholds(tmp_path: Path):
+    run = RunResult(
+        run_id="RUN_PERF_001",
+        timestamp="2026-02-12T10:00:00+00:00",
+        feature="feature_file.feature",
+        scenario="test_evaluate_layer2_answer_metrics_from_inline_dataset_table",
+        tags=["layer2", "live"],
+        selected_metrics=["answer_relevancy"],
+        dataset_size=1,
+        question_results=[
+            QuestionEvalResult(
+                question_id="Q1",
+                question="How many sixes?",
+                expected_answer="Three sixes.",
+                actual_answer="Tilak hit 3 sixes.",
+                retrieval_context=["chunk 1"],
+                metrics=[
+                    MetricResult(
+                        metric_name="answer_relevancy",
+                        threshold=0.6,
+                        score=0.9,
+                        passed=True,
+                        reason="Answer is relevant.",
+                    )
+                ],
+                raw_request={"question": "How many sixes?"},
+                raw_response={"answer": "Tilak hit 3 sixes."},
+                latency_ms=1500.0,
+                cache_hit=False,
+                prompt_tokens=100,
+                completion_tokens=50,
+                total_tokens=150,
+                token_cost_usd=0.01,
+            )
+        ],
+        metric_aggregates=[],
+    )
+    trend_summary = TrendSummary(
+        generated_at="2026-02-12T10:05:00+00:00",
+        keep_last_n=5,
+        metrics=[
+            MetricTrend(
+                metric_name="answer_relevancy",
+                points=[
+                    TrendPoint(
+                        run_id="RUN_PERF_001",
+                        timestamp="2026-02-12T10:00:00+00:00",
+                        avg_score=0.9,
+                        pass_rate=100.0,
+                        threshold=0.6,
+                    )
+                ],
+            )
+        ],
+    )
+
+    output = write_executive_html(
+        run_results=[run],
+        trend_summary=trend_summary,
+        output_path=tmp_path / "reports" / "index.html",
+        max_p95_latency_ms=1000.0,
+        max_avg_tokens_per_request=200.0,
+    )
+    html = output.read_text()
+
+    p95_gate_row = re.search(
+        r"<tr>\s*<td>P95 Latency \(ms\)</td>.*?<span class=\"badge badge-fail\">FAIL</span>.*?</tr>",
+        html,
+        flags=re.DOTALL,
+    )
+    assert p95_gate_row is not None
+
+    avg_tokens_gate_row = re.search(
+        r"<tr>\s*<td>Avg Tokens / Request</td>.*?<span class=\"badge badge-pass\">PASS</span>.*?</tr>",
+        html,
+        flags=re.DOTALL,
+    )
+    assert avg_tokens_gate_row is not None
+
+    combined_gate_row = re.search(
+        r"<tr>\s*<td>Combined Quality \+ Performance</td>.*?<span class=\"badge badge-fail\">FAIL</span>.*?</tr>",
+        html,
+        flags=re.DOTALL,
+    )
+    assert combined_gate_row is not None
 
 
 def test_metric_health_counts_aggregate_across_loaded_runs(tmp_path: Path):

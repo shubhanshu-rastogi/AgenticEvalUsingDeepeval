@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from deepeval.test_case import LLMTestCase
 
-from rag_eval_bdd.backend_client import BackendClient
+from rag_eval_bdd.backend_client import PERF_METADATA_KEY, BackendClient
 from rag_eval_bdd.metric_registry import build_metric, metric_threshold, normalize_metric_name
 from rag_eval_bdd.models import (
     AppConfig,
@@ -18,6 +18,7 @@ from rag_eval_bdd.models import (
     MetricAggregate,
     MetricResult,
     QuestionEvalResult,
+    RunPerformanceAggregate,
     RunResult,
 )
 
@@ -57,6 +58,38 @@ class EvaluationRunner:
             text = str(chunk)
             trimmed.append(text[:chars_limit])
         return trimmed
+
+    @staticmethod
+    def _coerce_int(value: Any) -> int | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            if not value.is_integer():
+                return None
+            return int(value)
+        if isinstance(value, str):
+            text = value.strip()
+            if text.isdigit():
+                return int(text)
+        return None
+
+    @staticmethod
+    def _coerce_float(value: Any) -> float | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            try:
+                return float(text)
+            except ValueError:
+                return None
+        return None
 
     def _resolve_row_metrics(
         self,
@@ -203,12 +236,25 @@ class EvaluationRunner:
                 question=row.question,
                 use_cache=self.config.evaluation.cache_ask_responses,
             )
+            perf_payload: dict[str, Any] = {}
+            if isinstance(raw_response, dict):
+                raw_perf = raw_response.get(PERF_METADATA_KEY)
+                if isinstance(raw_perf, dict):
+                    perf_payload = raw_perf
 
             answer = str(raw_response.get("answer", ""))
             retrieval_context = raw_response.get("retrieval_context", []) or []
             trimmed_retrieval_context = self._trim_retrieval_context(retrieval_context)
             logged_retrieval_context = self._prepare_logged_retrieval_context(trimmed_retrieval_context)
             expected_output = row.expected_answer or answer
+            latency_ms = self._coerce_float(perf_payload.get("latency_ms"))
+            cache_hit = perf_payload.get("cache_hit")
+            if not isinstance(cache_hit, bool):
+                cache_hit = None
+            prompt_tokens = self._coerce_int(perf_payload.get("prompt_tokens"))
+            completion_tokens = self._coerce_int(perf_payload.get("completion_tokens"))
+            total_tokens = self._coerce_int(perf_payload.get("total_tokens"))
+            token_cost_usd = self._coerce_float(perf_payload.get("token_cost_usd"))
 
             if self.config.evaluation.log_raw_payloads:
                 logged_request = self._sanitize_payload(raw_request)
@@ -222,6 +268,8 @@ class EvaluationRunner:
                 actual_output=answer,
                 expected_output=expected_output,
                 retrieval_context=trimmed_retrieval_context,
+                completion_time=(latency_ms / 1000.0) if latency_ms is not None else None,
+                token_cost=token_cost_usd,
             )
 
             metric_results: List[MetricResult] = []
@@ -303,10 +351,17 @@ class EvaluationRunner:
                     metrics=metric_results,
                     raw_request=logged_request,
                     raw_response=logged_response,
+                    latency_ms=latency_ms,
+                    cache_hit=cache_hit,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
+                    token_cost_usd=token_cost_usd,
                 )
             )
 
         aggregates = self._aggregate(question_results=question_results, selected_metrics=selected_metrics)
+        performance = self._aggregate_performance(question_results=question_results)
 
         return RunResult(
             run_id=run_id,
@@ -318,6 +373,51 @@ class EvaluationRunner:
             dataset_size=len(rows),
             question_results=question_results,
             metric_aggregates=aggregates,
+            performance=performance,
+        )
+
+    def _aggregate_performance(self, question_results: List[QuestionEvalResult]) -> RunPerformanceAggregate:
+        request_count = len(question_results)
+        latencies = [q.latency_ms for q in question_results if isinstance(q.latency_ms, (int, float))]
+        cached_latencies = [
+            q.latency_ms for q in question_results if q.cache_hit is True and isinstance(q.latency_ms, (int, float))
+        ]
+        uncached_latencies = [
+            q.latency_ms for q in question_results if q.cache_hit is False and isinstance(q.latency_ms, (int, float))
+        ]
+        prompt_tokens = [q.prompt_tokens for q in question_results if isinstance(q.prompt_tokens, int)]
+        completion_tokens = [q.completion_tokens for q in question_results if isinstance(q.completion_tokens, int)]
+        total_tokens = [q.total_tokens for q in question_results if isinstance(q.total_tokens, int)]
+        token_costs = [q.token_cost_usd for q in question_results if isinstance(q.token_cost_usd, (int, float))]
+
+        avg_latency_ms = float(sum(latencies) / len(latencies)) if latencies else None
+        p50_latency_ms = _percentile(latencies, 50) if latencies else None
+        p90_latency_ms = _percentile(latencies, 90) if latencies else None
+        p95_latency_ms = _percentile(latencies, 95) if latencies else None
+        max_latency_ms = float(max(latencies)) if latencies else None
+        avg_cached_latency_ms = float(sum(cached_latencies) / len(cached_latencies)) if cached_latencies else None
+        avg_uncached_latency_ms = float(sum(uncached_latencies) / len(uncached_latencies)) if uncached_latencies else None
+        avg_total_tokens_per_request = float(sum(total_tokens) / len(total_tokens)) if total_tokens else None
+        total_token_cost_usd = float(sum(float(value) for value in token_costs)) if token_costs else None
+
+        return RunPerformanceAggregate(
+            request_count=request_count,
+            cached_request_count=sum(1 for q in question_results if q.cache_hit is True),
+            uncached_request_count=sum(1 for q in question_results if q.cache_hit is False),
+            latency_count=len(latencies),
+            avg_latency_ms=avg_latency_ms,
+            p50_latency_ms=p50_latency_ms,
+            p90_latency_ms=p90_latency_ms,
+            p95_latency_ms=p95_latency_ms,
+            max_latency_ms=max_latency_ms,
+            avg_cached_latency_ms=avg_cached_latency_ms,
+            avg_uncached_latency_ms=avg_uncached_latency_ms,
+            token_usage_count=len(total_tokens),
+            total_prompt_tokens=sum(prompt_tokens) if prompt_tokens else None,
+            total_completion_tokens=sum(completion_tokens) if completion_tokens else None,
+            total_tokens=sum(total_tokens) if total_tokens else None,
+            avg_total_tokens_per_request=avg_total_tokens_per_request,
+            total_token_cost_usd=total_token_cost_usd,
         )
 
     def _aggregate(self, question_results: List[QuestionEvalResult], selected_metrics: List[str]) -> List[MetricAggregate]:

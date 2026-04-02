@@ -13,6 +13,8 @@ from urllib3.util.retry import Retry
 
 from rag_eval_bdd.models import BackendConfig
 
+PERF_METADATA_KEY = "_rag_eval_perf"
+
 
 class BackendClient:
     def __init__(self, config: BackendConfig):
@@ -42,6 +44,108 @@ class BackendClient:
         base = self.config.base_url.rstrip("/")
         endpoint = endpoint if endpoint.startswith("/") else f"/{endpoint}"
         return f"{base}{endpoint}"
+
+    @staticmethod
+    def _coerce_int(value: Any) -> int | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            if not value.is_integer():
+                return None
+            return int(value)
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            if text.isdigit():
+                return int(text)
+        return None
+
+    @staticmethod
+    def _coerce_float(value: Any) -> float | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            try:
+                return float(text)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _pick_value(payload: Dict[str, Any], keys: List[str]) -> Any:
+        for key in keys:
+            if key in payload:
+                return payload.get(key)
+        usage_candidates = [
+            payload.get("usage"),
+            payload.get("token_usage"),
+            payload.get("tokenUsage"),
+        ]
+        for usage in usage_candidates:
+            if not isinstance(usage, dict):
+                continue
+            for key in keys:
+                if key in usage:
+                    return usage.get(key)
+        return None
+
+    def _extract_token_usage(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        prompt_tokens = self._coerce_int(
+            self._pick_value(payload, ["prompt_tokens", "input_tokens", "promptTokens", "inputTokens"])
+        )
+        completion_tokens = self._coerce_int(
+            self._pick_value(payload, ["completion_tokens", "output_tokens", "completionTokens", "outputTokens"])
+        )
+        total_tokens = self._coerce_int(
+            self._pick_value(payload, ["total_tokens", "totalTokens"])
+        )
+        token_cost_usd = self._coerce_float(
+            self._pick_value(
+                payload,
+                [
+                    "token_cost_usd",
+                    "cost_usd",
+                    "tokenCostUsd",
+                    "costUsd",
+                    "token_cost",
+                    "tokenCost",
+                    "cost",
+                ],
+            )
+        )
+        return {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "token_cost_usd": token_cost_usd,
+        }
+
+    def _with_perf_metadata(
+        self,
+        response_payload: Dict[str, Any],
+        *,
+        latency_ms: float,
+        cache_hit: bool,
+    ) -> Dict[str, Any]:
+        response_with_perf = deepcopy(response_payload)
+        token_usage = self._extract_token_usage(response_payload)
+        response_with_perf[PERF_METADATA_KEY] = {
+            "latency_ms": round(float(latency_ms), 3),
+            "cache_hit": cache_hit,
+            "prompt_tokens": token_usage["prompt_tokens"],
+            "completion_tokens": token_usage["completion_tokens"],
+            "total_tokens": token_usage["total_tokens"],
+            "token_cost_usd": token_usage["token_cost_usd"],
+        }
+        return response_with_perf
 
     def check_reachable(self) -> None:
         candidates = [self.config.base_url, self._url("/docs"), self._url("/health")]
@@ -85,11 +189,18 @@ class BackendClient:
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         payload = {"session_id": session_id, "question": question}
         cache_key = (session_id, question.strip())
+        cache_lookup_started_at = time.perf_counter()
         if use_cache:
             cached = self._get_cached_ask(cache_key)
             if cached is not None:
-                return payload, cached
+                cache_latency_ms = (time.perf_counter() - cache_lookup_started_at) * 1000.0
+                return payload, self._with_perf_metadata(
+                    cached,
+                    latency_ms=cache_latency_ms,
+                    cache_hit=True,
+                )
 
+        request_started_at = time.perf_counter()
         response = self.session.post(
             self._url(self.config.ask_endpoint),
             json=payload,
@@ -97,9 +208,14 @@ class BackendClient:
         )
         response.raise_for_status()
         response_payload = response.json()
+        network_latency_ms = (time.perf_counter() - request_started_at) * 1000.0
         if use_cache:
             self._set_cached_ask(cache_key, response_payload)
-        return payload, response_payload
+        return payload, self._with_perf_metadata(
+            response_payload,
+            latency_ms=network_latency_ms,
+            cache_hit=False,
+        )
 
     def _get_cached_ask(self, cache_key: Tuple[str, str]) -> Dict[str, Any] | None:
         now = time.monotonic()
